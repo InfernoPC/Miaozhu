@@ -1,0 +1,68 @@
+/**
+ * Minimal stand-in for the Electron APIs the main-process code touches, so it can run under
+ * plain Node in Vitest. Paths are set per test via `app.setPath` (see helpers/sandbox.ts).
+ */
+import { existsSync, mkdirSync, renameSync } from 'node:fs'
+import { basename, extname, join } from 'node:path'
+
+const paths: Record<string, string> = {}
+
+export const app = {
+  getPath(name: string): string {
+    const p = paths[name]
+    if (!p) throw new Error(`test: app.getPath('${name}') not set`)
+    return p
+  },
+  setPath(name: string, value: string): void {
+    paths[name] = value
+  },
+  getName: () => 'desktop-agent',
+  isPackaged: false
+}
+
+/** Reversible "encryption" so tests can check that stored keys round-trip. */
+export const safeStorage = {
+  isEncryptionAvailable: () => true,
+  encryptString: (s: string) => Buffer.from(`enc:${s}`),
+  decryptString: (b: Buffer) => b.toString().replace(/^enc:/, '')
+}
+
+export const shell = {
+  opened: [] as string[],
+  async openExternal(url: string): Promise<void> {
+    shell.opened.push(url)
+  },
+  /** Moves into <sandbox>/.Trash so tests can assert the file went to the trash, not away. */
+  async trashItem(p: string): Promise<void> {
+    const trash = join(app.getPath('home'), '.Trash')
+    mkdirSync(trash, { recursive: true })
+    renameSync(p, join(trash, basename(p)))
+  },
+  showItemInFolder(): void {}
+}
+
+const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'])
+
+function fakeImage(width: number, height: number, empty = false) {
+  const img = {
+    isEmpty: () => empty,
+    getSize: () => ({ width, height }),
+    resize: ({ width: w, height: h }: { width: number; height: number }) => fakeImage(w, h),
+    toJPEG: () => Buffer.from(`jpeg ${width}x${height}`),
+    toPNG: () => Buffer.from(`png ${width}x${height}`)
+  }
+  return img
+}
+
+export const nativeImage = {
+  createFromPath: (p: string) => (existsSync(p) && IMAGE_EXTS.has(extname(p).toLowerCase()) ? fakeImage(2400, 1600) : fakeImage(0, 0, true))
+}
+
+export const systemPreferences = { getMediaAccessStatus: () => 'granted' }
+export const screen = {
+  getAllDisplays: () => [{ id: 1, size: { width: 1440, height: 900 }, scaleFactor: 2 }],
+  getPrimaryDisplay: () => ({ id: 1, size: { width: 1440, height: 900 }, scaleFactor: 2 })
+}
+export const desktopCapturer = {
+  getSources: async () => [{ display_id: '1', thumbnail: fakeImage(2880, 1800) }]
+}

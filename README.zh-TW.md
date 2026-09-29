@@ -21,6 +21,7 @@
 - 確認時選「本次對話都允許」，清除對話前同類操作不再詢問
 - `~/.ssh`、瀏覽器資料、鑰匙圈等位置**永遠禁止存取**，就算使用者同意也不行
 - 每次操作都記錄在本機操作紀錄（設定 → 檔案權限 → 操作紀錄）
+- 對話會存在本機，重開 App 後自動恢復（圖片不保存）；「這次對話都允許」的授權不會恢復
 
 ## 開發環境
 
@@ -64,6 +65,7 @@ API Key 以作業系統鑰匙圈加密（macOS Keychain / Windows DPAPI），只
 |---|---|
 | `npm run dev` | 開發模式（修改畫面程式碼會即時更新） |
 | `npm run start:mac` | macOS：編譯後以獨立 App 啟動（不經過終端機）。需要截圖時用這個，螢幕錄製權限只要允許「Electron」，不必重開終端機 |
+| `npm test` | 執行自動測試（不需要 Electron 或網路） |
 | `npm run typecheck` | 型別檢查 |
 | `npm run build` | 編譯到 `out/` |
 | `npm run dist:mac` / `npm run dist:win` | 產生安裝檔（尚未簽章） |

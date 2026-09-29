@@ -37,6 +37,7 @@ It connects to any OpenAI-compatible API, can use tools on your computer (files,
 - Credential and browser-data locations (`~/.ssh`, `~/.aws`, Keychain, browser profiles…) are always blocked, even if you approve. Paths are symlink-resolved before checking, so links can't be used to get around this.
 - "Allow for this conversation" grants last until you clear the chat.
 - Every tool call is written to a local audit log.
+- The conversation is saved locally and restored after a restart (images are not saved). Permission grants are not restored.
 - File and web content is treated as data, not instructions, in the system prompt.
 
 ## Getting started
@@ -82,7 +83,8 @@ This builds and launches Electron on its own, so you only need to allow "Electro
 |---|---|
 | `npm run dev` | Development mode with hot reload |
 | `npm run start:mac` | Build and launch as a standalone app (macOS) |
-| `npm run typecheck` | Type-check main and renderer |
+| `npm test` | Run the test suite (Vitest; no Electron or network needed) |
+| `npm run typecheck` | Type-check main, renderer and tests |
 | `npm run build` | Build to `out/` |
 | `npm run dist:mac` / `npm run dist:win` | Build installers (unsigned) |
 
@@ -101,6 +103,7 @@ src/
 │   └── ipc.ts            # Main ↔ renderer messages
 ├── preload/              # Bridge: the UI can only reach main through window.api
 ├── shared/types.ts       # Shared types and the IPC contract
+tests/                    # Vitest: permissions, tools, agent loop, providers, saved chats
 └── renderer/src/
     ├── pet/              # Desktop characters: desk-slapping cat, orange cat
     ├── chat/             # Chat window
@@ -112,7 +115,7 @@ src/
 See [DESIGN.md](DESIGN.md) (Traditional Chinese). Next up:
 
 - **M3**: plugins compatible with the Claude ecosystem (MCP servers and `SKILL.md` skills), and tools declared in YAML
-- **M4**: reminders, saved conversations, swappable animated skins, local-only mode for sensitive folders
+- **M4**: reminders, conversation history list, swappable animated skins, local-only mode for sensitive folders
 - **M5**: signed installers, auto-update, audit log viewer
 
 ## Credits

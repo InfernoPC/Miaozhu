@@ -19,6 +19,7 @@ import { isImagePath, readForModel } from '../tools/fs'
 import { findTool, parseArgs, TOOLS, ToolError } from '../tools'
 import { displayPath, expandPath, realPath } from '../tools/paths'
 import { shellName } from '../tools/shell'
+import type { ConversationStore } from './conversation-store'
 
 /** What the agent needs from settings; SettingsStore implements it, tests can fake it. */
 export interface AgentSettings {
@@ -30,6 +31,8 @@ export interface AgentSettings {
 
 export interface AgentDeps {
   hidePet(): Promise<() => void>
+  /** Where the conversation is saved between launches; omitted in tests that don't care. */
+  store?: ConversationStore
 }
 
 const MAX_STEPS = 15
@@ -91,6 +94,11 @@ export class Agent {
       () => this.settings.allowedFolders(),
       (req) => this.askUser(req)
     )
+    const saved = deps.store?.load()
+    if (saved) {
+      this.history = saved.history
+      this.turns = saved.turns
+    }
   }
 
   getHistory(): ChatMessage[] {
@@ -114,6 +122,7 @@ export class Agent {
     this.history = []
     this.turns = []
     this.guard.resetSession()
+    this.deps.store?.clear()
     this.broadcast({ type: 'history-cleared' })
   }
 
@@ -220,6 +229,7 @@ export class Agent {
         p.resolve('deny')
       }
       this.history.push(assistant)
+      this.deps.store?.save({ history: this.history, turns: this.turns })
       this.broadcast({ type: 'turn-end', message: assistant })
     }
   }

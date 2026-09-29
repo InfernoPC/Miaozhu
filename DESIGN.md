@@ -34,7 +34,7 @@
 | MCP | `@modelcontextprotocol/sdk`（client 端） |
 | 角色動畫 | `lottie-web`（主）/ Sprite sheet（備） |
 | 金鑰儲存 | Electron `safeStorage`（背後是 Keychain / DPAPI） |
-| 本地資料 | SQLite（`better-sqlite3`），存對話紀錄、設定、提醒 |
+| 本地資料 | JSON 檔（寫入時先寫暫存檔再改名，避免寫到一半損壞），存設定與目前對話；資料量變大（多段對話、搜尋）時再換 SQLite |
 | 打包 | `electron-builder`（.dmg / .exe NSIS），mac 需簽章＋公證 |
 
 ## 3. 整體架構

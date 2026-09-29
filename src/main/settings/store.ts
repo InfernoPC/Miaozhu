@@ -1,6 +1,5 @@
 import { app, safeStorage } from 'electron'
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { join } from 'node:path'
 import type {
   PetSkinId,
   ProfileView,
@@ -12,6 +11,7 @@ import type {
 } from '@shared/types'
 import { blockedRoots } from '../permissions/guard'
 import { displayPath } from '../tools/paths'
+import { readJson, writeJson } from '../util/json-file'
 
 interface ConfigFile {
   activeProfileId: string | null
@@ -32,22 +32,6 @@ type SecretsFile = Record<string, string>
 
 const configPath = () => join(app.getPath('userData'), 'config.json')
 const secretsPath = () => join(app.getPath('userData'), 'secrets.json')
-
-function readJson<T>(path: string, fallback: T): T {
-  try {
-    return existsSync(path) ? (JSON.parse(readFileSync(path, 'utf8')) as T) : fallback
-  } catch {
-    return fallback
-  }
-}
-
-/** Write via a temp file so a crash mid-write never leaves a truncated config. */
-function writeJson(path: string, data: unknown): void {
-  mkdirSync(dirname(path), { recursive: true })
-  const tmp = `${path}.tmp`
-  writeFileSync(tmp, JSON.stringify(data, null, 2), { mode: 0o600 })
-  renameSync(tmp, path)
-}
 
 export class SettingsStore {
   private config: ConfigFile = readJson<ConfigFile>(configPath(), { activeProfileId: null, profiles: [] })

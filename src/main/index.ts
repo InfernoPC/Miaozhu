@@ -1,6 +1,7 @@
 import { app } from 'electron'
 import type { AgentEvent } from '@shared/types'
 import { Agent } from './agent/agent'
+import { ConversationStore } from './agent/conversation-store'
 import { registerIpc } from './ipc'
 import { SettingsStore } from './settings/store'
 import { WindowManager } from './windows'
@@ -17,7 +18,7 @@ app.whenReady().then(() => {
   const broadcast = (e: AgentEvent) => {
     for (const win of windows.all()) if (!win.isDestroyed()) win.webContents.send('agent:event', e)
   }
-  const agent = new Agent(settings, broadcast, { hidePet: () => windows.hidePet() })
+  const agent = new Agent(settings, broadcast, { hidePet: () => windows.hidePet(), store: new ConversationStore() })
   registerIpc(agent, settings, windows)
 
   windows.createPet()
