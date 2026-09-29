@@ -1,0 +1,30 @@
+.md { line-height: 1.55; word-break: break-word; }
+.md > :first-child { margin-top: 0; }
+.md > :last-child { margin-bottom: 0; }
+.md p, .md ul, .md ol, .md pre, .md table, .md blockquote { margin: 0 0 0.6em; }
+.md ul, .md ol { padding-left: 1.4em; }
+.md li + li { margin-top: 0.15em; }
+.md h1, .md h2, .md h3, .md h4 { margin: 0.8em 0 0.4em; line-height: 1.3; }
+.md h1 { font-size: 1.25em; }
+.md h2 { font-size: 1.15em; }
+.md h3, .md h4 { font-size: 1.05em; }
+.md a { color: var(--pawpad-deep); text-underline-offset: 2px; }
+.md code {
+  font-family: var(--font-code);
+  font-size: 0.9em;
+  background: var(--paper-2);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+.md pre {
+  background: var(--paper-2);
+  padding: 8px 10px;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+.md pre code { background: none; padding: 0; font-size: 12.5px; }
+.md blockquote { border-left: 2px solid var(--pawpad); padding-left: 10px; color: var(--graphite); }
+.md table { border-collapse: collapse; display: block; overflow-x: auto; }
+.md th, .md td { border-bottom: 1px solid var(--rule); padding: 5px 12px 5px 0; text-align: left; }
+.md th { font-weight: 600; border-bottom: 1.5px solid var(--ink); }
+.md hr { border: none; border-top: 1px solid var(--rule); margin: 0.8em 0; }

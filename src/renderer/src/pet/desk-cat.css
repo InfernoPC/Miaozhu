@@ -1,0 +1,73 @@
+.desk-cat { overflow: visible; display: block; }
+.desk-cat .dc-fur { fill: #ffffff; }
+.desk-cat .dc-outline, .desk-cat .dc-line { stroke: #1f1c1a; stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+.desk-cat .dc-line { fill: none; stroke-width: 2.1; }
+.desk-cat .dc-edge { stroke: #1f1c1a; stroke-width: 2.6; stroke-linecap: round; }
+.desk-cat .dc-edge-halo { stroke: rgba(255, 255, 255, 0.85); stroke-width: 6; stroke-linecap: round; }
+.desk-cat .dc-eye { fill: #1f1c1a; }
+.desk-cat .dc-pad, .desk-cat .dc-bean { fill: #f59aab; }
+.desk-cat .dc-mouth-open { fill: #d8627a; stroke: #1f1c1a; stroke-width: 1.8; }
+.desk-cat .dc-sweat { fill: #8cc8f0; stroke: #1f1c1a; stroke-width: 1.5; }
+.desk-cat .dc-zzz { fill: #7a8fb0; font: bold 18px sans-serif; }
+
+.desk-cat .dc-body, .desk-cat .dc-paw, .desk-cat .dc-eyes-open { transform-box: fill-box; }
+.desk-cat .dc-body { transform-origin: 50% 100%; animation: dc-breathe 3.2s ease-in-out infinite; }
+.desk-cat .dc-eyes-open { transform-origin: 50% 50%; animation: dc-blink 5s infinite; }
+.desk-cat .dc-paw { transform-origin: 50% 100%; transition: transform 0.2s ease; }
+
+/* Hidden by default; states reveal what they need. */
+.desk-cat .dc-eyes-closed, .desk-cat .dc-eyes-x, .desk-cat .dc-mouth-open,
+.desk-cat .dc-impact, .desk-cat .dc-sweat, .desk-cat .dc-zzz { display: none; }
+
+/* idle: paws resting on the edge */
+
+/* listening: paws raised higher, ready to go */
+.desk-cat.state-listening .dc-paw { transform: translateY(-8px); }
+
+/* thinking: slow alternating taps */
+.desk-cat.state-thinking .dc-paw-left { animation: dc-slap 0.9s ease-in-out infinite; }
+.desk-cat.state-thinking .dc-paw-right { animation: dc-slap 0.9s ease-in-out infinite 0.45s; }
+
+/* talking: quick alternating slaps + mouth */
+.desk-cat.state-talking .dc-paw-left { animation: dc-slap 0.26s ease-in-out infinite; }
+.desk-cat.state-talking .dc-paw-right { animation: dc-slap 0.26s ease-in-out infinite 0.13s; }
+.desk-cat.state-talking .dc-mouth { display: none; }
+.desk-cat.state-talking .dc-mouth-open { display: block; transform-box: fill-box; transform-origin: 50% 0; animation: dc-talk 0.26s ease-in-out infinite alternate; }
+
+/* working: frantic slapping with impact lines */
+.desk-cat.state-working .dc-paw-left { animation: dc-slap 0.16s linear infinite; }
+.desk-cat.state-working .dc-paw-right { animation: dc-slap 0.16s linear infinite 0.08s; }
+.desk-cat.state-working .dc-impact { display: block; animation: dc-flash 0.16s linear infinite; }
+.desk-cat.state-working .dc-impact-right { animation-delay: 0.08s; }
+
+/* alert: both paws slam together */
+.desk-cat.state-alert .dc-paw { animation: dc-slam 0.7s ease-out infinite; }
+.desk-cat.state-alert .dc-impact { display: block; animation: dc-flash-slam 0.7s ease-out infinite; }
+.desk-cat.state-alert .dc-body { animation: dc-hop 0.7s ease-out infinite; }
+
+/* sleeping: sinks behind the edge, eyes closed, paws tucked away */
+.desk-cat.state-sleeping .dc-eyes-open { display: none; }
+.desk-cat.state-sleeping .dc-eyes-closed { display: block; }
+.desk-cat.state-sleeping .dc-body { animation: none; transform: translateY(10px); }
+.desk-cat.state-sleeping .dc-paw { transform: translateY(26px); }
+.desk-cat.state-sleeping .dc-zzz { display: block; animation: dc-float-z 2.4s ease-in-out infinite; }
+.desk-cat.state-sleeping .dc-zzz-2 { animation-delay: 1.2s; }
+
+/* error: dizzy eyes and a sweat drop */
+.desk-cat.state-error .dc-eyes-open { display: none; }
+.desk-cat.state-error .dc-eyes-x, .desk-cat.state-error .dc-sweat { display: block; }
+
+/* A slap: paw lifts, then strikes down past the edge (the clip hides the part below it). */
+@keyframes dc-slap { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-14px); } 75% { transform: translateY(12px); } }
+@keyframes dc-slam { 0%, 100% { transform: translateY(0); } 30% { transform: translateY(-18px); } 50% { transform: translateY(14px); } }
+@keyframes dc-hop { 0%, 100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
+@keyframes dc-breathe { 50% { transform: scaleY(1.025); } }
+@keyframes dc-blink { 0%, 94%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.1); } }
+@keyframes dc-talk { from { transform: scaleY(0.4); } to { transform: scaleY(1.15); } }
+@keyframes dc-flash { 0%, 40% { opacity: 1; } 60%, 100% { opacity: 0; } }
+@keyframes dc-flash-slam { 0%, 40% { opacity: 0; } 45%, 65% { opacity: 1; } 80%, 100% { opacity: 0; } }
+@keyframes dc-float-z { 0% { opacity: 0; transform: translate(0, 6px); } 50% { opacity: 1; } 100% { opacity: 0; transform: translate(8px, -12px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .desk-cat, .desk-cat * { animation: none !important; }
+}

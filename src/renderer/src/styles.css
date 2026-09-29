@@ -1,0 +1,138 @@
+/*
+ * 喵助 design tokens — "drawn with the cat's pen":
+ * paper, ink, graphite, and paw-pad pink as the one accent. The speech balloon
+ * (pet bubble, permission prompts) is the single bold element; everything else stays quiet.
+ */
+:root {
+  --paper: #ffffff;
+  --paper-2: #f6f4f2;
+  --ink: #231f20;
+  --graphite: #6e6862;
+  --rule: #e7e3df;
+  --pawpad: #f59aab;
+  --pawpad-deep: #c8385a;
+  --blush: #fdebef;
+  --danger: #b42318;
+  --ok: #2f7d5b;
+
+  --font-voice: 'Huninn', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  --font-code: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --radius-balloon: 20px;
+
+  color-scheme: light;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #1f2127;
+    --paper-2: #282b32;
+    --ink: #f3eee9;
+    --graphite: #a7a09a;
+    --rule: #3a3d45;
+    --pawpad: #f7a8b8;
+    --pawpad-deep: #f7a8b8;
+    --blush: #3b2b33;
+    --danger: #ff8a7a;
+    --ok: #7fd1a8;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; height: 100%; }
+body { background: var(--paper); }
+
+/* The pet window must stay fully transparent. */
+html[data-route='pet'], html[data-route='pet'] body { background: transparent; overflow: hidden; user-select: none; }
+
+.icon { flex-shrink: 0; vertical-align: -0.2em; }
+/* The header cat follows the theme: paper-filled head, ink lines. */
+.cat-mark { flex-shrink: 0; color: var(--ink); }
+.cat-mark-head { fill: var(--paper); }
+
+/* ── Controls ───────────────────────────────────────────────────────────── */
+
+button {
+  font: inherit;
+  color: var(--ink);
+  background: transparent;
+  border: 1.5px solid var(--rule);
+  border-radius: var(--radius-s);
+  padding: 5px 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: border-color 0.12s, background-color 0.12s;
+}
+button:hover:not(:disabled) { border-color: var(--ink); }
+button:disabled { opacity: 0.45; cursor: default; }
+button.primary { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+button.primary:hover:not(:disabled) { background: var(--pawpad-deep); border-color: var(--pawpad-deep); }
+button.primary:disabled { background: transparent; border-color: var(--rule); color: var(--graphite); opacity: 1; }
+button.quiet { border-color: transparent; color: var(--graphite); padding: 4px 8px; }
+button.quiet:hover:not(:disabled) { color: var(--ink); border-color: transparent; background: var(--paper-2); }
+button.danger { color: var(--danger); }
+button.danger:hover:not(:disabled) { border-color: var(--danger); }
+
+input, textarea, select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1.5px solid var(--rule);
+  border-radius: var(--radius-s);
+  padding: 7px 10px;
+  width: 100%;
+}
+input::placeholder, textarea::placeholder { color: var(--graphite); opacity: 0.8; }
+input:hover, textarea:hover, select:hover { border-color: color-mix(in srgb, var(--ink) 35%, var(--rule)); }
+
+/* One focus treatment everywhere: a paw-pad ring that never gets lost on either theme. */
+:focus-visible { outline: 2.5px solid var(--pawpad); outline-offset: 2px; }
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px color-mix(in srgb, var(--pawpad) 45%, transparent); }
+
+/* ── Tool log (chat + bubble): a quiet running record, not a stack of cards ── */
+
+.tool-log { border-left: 2px solid var(--rule); margin: 6px 0 8px 2px; padding-left: 10px; display: flex; flex-direction: column; gap: 3px; }
+.tool-card { display: flex; align-items: baseline; gap: 7px; font-size: 12.5px; color: var(--graphite); line-height: 1.5; }
+.tool-card .icon { align-self: center; }
+.tool-title { color: var(--ink); word-break: break-all; flex: 1; min-width: 0; }
+.tool-note { white-space: nowrap; flex-shrink: 0; }
+.tool-done .icon { color: var(--ok); }
+.tool-error .icon, .tool-denied .icon { color: var(--danger); }
+.tool-error, .tool-denied { flex-wrap: wrap; }
+.tool-error .tool-note, .tool-denied .tool-note { color: var(--danger); white-space: normal; flex-basis: 100%; padding-left: 21px; }
+.tool-waiting-approval .icon, .tool-waiting-approval .tool-note { color: var(--pawpad-deep); }
+.spin { animation: spin 1.1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Attachment chips ───────────────────────────────────────────────────── */
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  padding: 2px 4px 2px 9px;
+  border-radius: 999px;
+  border: 1.5px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  max-width: 240px;
+}
+.chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip:not(:has(.chip-x)) { padding-right: 10px; }
+.chip-x { border: none; padding: 0 5px; font-size: 15px; line-height: 1; color: var(--graphite); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

@@ -1,0 +1,114 @@
+/*
+ * The pet lives in the cat's world: its balloon is always paper and ink, whatever the
+ * system theme, so it matches the line-art character sitting under it.
+ */
+.pet-root {
+  --paper: #ffffff;
+  --paper-2: #f4f2f0;
+  --ink: #231f20;
+  --graphite: #6e6862;
+  --rule: #e2ddd8;
+  --pawpad: #f59aab;
+  --pawpad-deep: #c8385a;
+  --danger: #b42318;
+  --ok: #2f7d5b;
+  color-scheme: light;
+  color: var(--ink);
+
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 8px 10px 0;
+}
+
+.pet-top {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+  margin-bottom: 2px;
+}
+
+/* ── The balloon: the one bold element ─────────────────────────────────── */
+
+.bubble {
+  position: relative;
+  background: var(--paper);
+  border: 2.5px solid var(--ink);
+  border-radius: var(--radius-balloon);
+  box-shadow: 4px 4px 0 var(--pawpad);
+  padding: 11px 14px 8px;
+  margin: 0 6px 14px 0;
+  user-select: text;
+  transform-origin: 58% 100%;
+  animation: balloon-in 0.22s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+/* Tail: an ink triangle with a paper triangle inside, pointing at the cat's head. */
+.bubble::before,
+.bubble::after {
+  content: '';
+  position: absolute;
+  left: 58%;
+  border-style: solid;
+  border-color: transparent;
+}
+.bubble::before { bottom: -17px; margin-left: -2px; border-width: 17px 7px 0 12px; border-top-color: var(--ink); }
+.bubble::after { bottom: -12px; margin-left: 1.5px; border-width: 12px 4px 0 8px; border-top-color: var(--paper); }
+@keyframes balloon-in {
+  from { transform: scale(0.85); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.bubble-error { box-shadow: 4px 4px 0 color-mix(in srgb, var(--danger) 45%, transparent); }
+
+.bubble-text {
+  max-height: 176px;
+  overflow-y: auto;
+  font-family: var(--font-voice);
+  font-size: 15px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+.bubble-text .md code, .bubble-text .md pre { font-family: var(--font-code); }
+.bubble-text .md pre code { font-size: 11.5px; }
+.bubble-status { display: flex; align-items: center; gap: 7px; color: var(--graphite); font-family: var(--font-ui); font-size: 13px; }
+
+.bubble-actions { display: flex; justify-content: flex-end; gap: 2px; margin-top: 4px; }
+.bubble-actions button { font-size: 12.5px; }
+.bubble-more { color: var(--graphite); font-size: 12px; margin-top: 6px; text-align: right; }
+
+/* ── Input ─────────────────────────────────────────────────────────────── */
+
+.pet-input { display: flex; flex-direction: column; gap: 6px; margin-right: 6px; animation: balloon-in 0.18s ease-out; }
+.pet-input input {
+  border: 2.5px solid var(--ink);
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-family: var(--font-voice);
+  font-size: 15px;
+  box-shadow: 3px 3px 0 var(--pawpad);
+}
+.pet-input input:focus { box-shadow: 3px 3px 0 var(--pawpad), 0 0 0 3px color-mix(in srgb, var(--pawpad) 40%, transparent); }
+
+.pet-attach {
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 16px;
+  padding: 9px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.quick { display: flex; flex-wrap: wrap; gap: 5px; }
+.quick button { padding: 3px 11px; font-size: 13px; border-radius: 999px; border-color: var(--ink); }
+.quick button:hover { background: var(--ink); color: var(--paper); }
+
+/* ── The cat ───────────────────────────────────────────────────────────── */
+
+.cat-hit { cursor: grab; touch-action: none; }
+.cat-hit:active { cursor: grabbing; }
+/* A file hovering over the cat: its paw pads light up (drop-shadow in pink). */
+.cat-hit.drag-over { filter: drop-shadow(0 0 6px var(--pawpad)) drop-shadow(0 0 2px var(--pawpad)); }

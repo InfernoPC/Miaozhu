@@ -1,0 +1,30 @@
+.perm { display: flex; flex-direction: column; gap: 7px; user-select: text; }
+.perm-ask { margin: 0; font-family: var(--font-voice); font-size: 16px; line-height: 1.4; }
+.perm-what { display: flex; align-items: flex-start; gap: 7px; font-weight: 600; word-break: break-all; }
+.perm-what .icon { margin-top: 3px; }
+.perm-risky .perm-what .icon { color: var(--danger); }
+.perm-reason { margin: 0; color: var(--graphite); font-size: 12.5px; }
+.perm-detail {
+  margin: 0;
+  max-height: 160px;
+  overflow: auto;
+  font: 12px/1.5 var(--font-code);
+  white-space: pre-wrap;
+  word-break: break-all;
+  background: var(--paper-2);
+  border-radius: var(--radius-s);
+  padding: 7px 9px;
+}
+.perm-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+.perm-compact .perm-detail { max-height: 84px; }
+.perm-compact .perm-actions button { padding: 4px 10px; font-size: 13px; }
+
+/* In the chat list the prompt is drawn as a balloon from the cat. */
+.perm-balloon {
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-balloon);
+  padding: 12px 14px;
+  box-shadow: 4px 4px 0 var(--pawpad);
+  background: var(--paper);
+  margin: 4px 4px 4px 0;
+}

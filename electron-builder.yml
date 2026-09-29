@@ -1,0 +1,15 @@
+appId: app.miaozhu.desktop
+productName: Miaozhu
+directories:
+  buildResources: build
+files:
+  - out/**/*
+  - package.json
+mac:
+  target: dmg
+  category: public.app-category.productivity
+win:
+  target: nsis
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true

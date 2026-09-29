@@ -1,0 +1,81 @@
+.cat { overflow: visible; display: block; }
+.cat .fur, .cat .body { fill: #f4a259; }
+.cat .belly { fill: #fcd9b6; }
+.cat .paw { fill: #f7b77c; }
+.cat .ear-inner, .cat .nose { fill: #f28b9b; }
+.cat .blush { fill: #f28b9b; opacity: 0.45; }
+.cat .stripe, .cat .tail { stroke: #d9803c; fill: none; stroke-linecap: round; }
+.cat .stripe { stroke-width: 4; }
+.cat .tail { stroke: #f4a259; stroke-width: 13; }
+.cat .eye { fill: #2b2724; }
+.cat .eye-shine { fill: #fff; }
+.cat .eyes-closed, .cat .eyes-sad, .cat .mouth { stroke: #2b2724; stroke-width: 2.5; fill: none; stroke-linecap: round; }
+.cat .mouth-open { fill: #8a3b3b; }
+.cat .whisker { stroke: #7a5a44; stroke-width: 1.5; stroke-linecap: round; }
+.cat .zzz { fill: #7a8fb0; font: bold 18px sans-serif; }
+.cat .thinking-dots circle { fill: #ffffff; stroke: #c9c1b8; stroke-width: 1.5; }
+
+.cat .head, .cat .ear, .cat .body, .cat .tail { transform-box: fill-box; }
+.cat .head { transform-origin: 50% 90%; transition: transform 0.3s ease; }
+.cat .ear-left { transform-origin: 100% 100%; transition: transform 0.25s; }
+.cat .ear-right { transform-origin: 0% 100%; transition: transform 0.25s; }
+.cat .body { transform-origin: 50% 100%; animation: breathe 3.2s ease-in-out infinite; }
+.cat .tail { transform-origin: 0% 100%; animation: tail-sway 2.4s ease-in-out infinite; }
+.cat .eyes-open { transform-box: fill-box; transform-origin: 50% 50%; animation: blink 5s infinite; }
+
+/* Hidden by default; each state reveals what it needs. */
+.cat .eyes-closed, .cat .eyes-sad, .cat .mouth-open, .cat .thinking-dots, .cat .zzz { display: none; }
+
+/* listening: ears perk up */
+.cat.state-listening .ear-left { transform: rotate(-8deg) translateY(-3px); }
+.cat.state-listening .ear-right { transform: rotate(8deg) translateY(-3px); }
+
+/* thinking: head tilt + thought dots */
+.cat.state-thinking .head { animation: tilt 1.6s ease-in-out infinite; }
+.cat.state-thinking .thinking-dots { display: block; }
+.cat.state-thinking .thinking-dots circle { animation: dot 1.2s ease-in-out infinite; }
+.cat.state-thinking .thinking-dots circle:nth-child(2) { animation-delay: 0.2s; }
+.cat.state-thinking .thinking-dots circle:nth-child(3) { animation-delay: 0.4s; }
+
+/* talking: mouth opens and closes */
+.cat.state-talking .mouth { display: none; }
+.cat.state-talking .mouth-open { display: block; transform-box: fill-box; transform-origin: 50% 0; animation: talk 0.28s ease-in-out infinite alternate; }
+
+/* working: quick tail + small bob */
+.cat.state-working .tail { animation-duration: 0.8s; }
+.cat.state-working .head { animation: bob 0.5s ease-in-out infinite alternate; }
+
+/* alert: jump */
+.cat.state-alert { animation: jump 0.6s ease-out infinite; }
+.cat.state-alert .ear-left { transform: rotate(-12deg); }
+.cat.state-alert .ear-right { transform: rotate(12deg); }
+
+/* sleeping: eyes closed, zzz, slow breathing */
+.cat.state-sleeping .eyes-open { display: none; }
+.cat.state-sleeping .eyes-closed { display: block; }
+.cat.state-sleeping .zzz { display: block; animation: float-z 2.4s ease-in-out infinite; }
+.cat.state-sleeping .zzz-2 { animation-delay: 1.2s; }
+.cat.state-sleeping .body { animation-duration: 5s; }
+.cat.state-sleeping .tail { animation: none; }
+.cat.state-sleeping .head { transform: rotate(-6deg) translateY(4px); }
+
+/* error: ears down, sad eyes */
+.cat.state-error .eyes-open { display: none; }
+.cat.state-error .eyes-sad { display: block; }
+.cat.state-error .ear-left { transform: rotate(-28deg); }
+.cat.state-error .ear-right { transform: rotate(28deg); }
+.cat.state-error .tail { animation: none; }
+
+@keyframes breathe { 50% { transform: scaleY(1.035); } }
+@keyframes tail-sway { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-14deg); } }
+@keyframes blink { 0%, 94%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.1); } }
+@keyframes tilt { 0%, 100% { transform: rotate(-9deg); } 50% { transform: rotate(-3deg); } }
+@keyframes dot { 50% { transform: translateY(-4px); } }
+@keyframes talk { from { transform: scaleY(0.3); } to { transform: scaleY(1.2); } }
+@keyframes bob { to { transform: translateY(2px); } }
+@keyframes jump { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-14px); } }
+@keyframes float-z { 0% { opacity: 0; transform: translate(0, 6px); } 50% { opacity: 1; } 100% { opacity: 0; transform: translate(8px, -12px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .cat, .cat * { animation: none !important; }
+}
