@@ -1,5 +1,6 @@
 import OpenAI from 'openai'
 import { MAX_FALLBACK_MODELS, type ProviderProfile } from '@shared/types'
+import { errorStatus } from './errors'
 import type { LLMMessage, LLMProvider, LLMRequest, StreamEvent, ToolCall } from './types'
 
 /**
@@ -88,7 +89,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
 /** Errors where another model may well succeed: busy, down, gated, or out of credit for this model. */
 function shouldFallback(err: unknown): boolean {
   if (err instanceof OpenAI.APIConnectionError) return false // the whole server is unreachable
-  const status = (err as { status?: number }).status
+  const status = errorStatus(err)
   return status === 402 || status === 403 || status === 404 || status === 408 || status === 429 || (!!status && status >= 500)
 }
 

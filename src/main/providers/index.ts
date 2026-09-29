@@ -1,5 +1,6 @@
 import OpenAI from 'openai'
 import type { ProviderProfile } from '@shared/types'
+import { errorStatus } from './errors'
 import { OpenAICompatibleProvider } from './openai-compatible'
 import type { LLMProvider } from './types'
 
@@ -14,7 +15,7 @@ export function createProvider(profile: ProviderProfile, apiKey: string | undefi
 
 /** Turns SDK/network errors into a message a non-developer can act on. */
 export function describeError(err: unknown): string {
-  const e = err as { status?: number; message?: string }
+  const e = { status: errorStatus(err), message: (err as { message?: string }).message }
   // Gateways like OpenRouter put the real reason (e.g. "rate-limited upstream") in the error body.
   const detail = serverDetail(err)
   const withDetail = (msg: string) => (detail ? `${msg}\n伺服器說明：${detail}` : msg)

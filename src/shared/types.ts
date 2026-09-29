@@ -50,6 +50,13 @@ export interface SettingsView {
   search: SearchConfig & { hasKey: boolean }
   /** Paths that are never readable or writable, shown for transparency. */
   blockedPaths: string[]
+  /** The persona in effect (the default when the user hasn't customized it). */
+  persona: string
+  personaIsDefault: boolean
+  defaultPersona: string
+  /** The rules the persona can't override, shown read-only in settings. */
+  fixedRules: string
+  maxPersonaChars: number
 }
 
 export interface SaveSearchInput {
@@ -170,6 +177,8 @@ export interface DesktopApi {
     saveSearch(input: SaveSearchInput): Promise<SettingsView>
     testSearch(input: SaveSearchInput): Promise<TestResult>
     openAuditLog(): Promise<void>
+    /** '' restores the default persona. */
+    savePersona(text: string): Promise<SettingsView>
   }
   files: {
     /** Absolute path of a dropped File (Electron removed File.path in sandboxed renderers). */

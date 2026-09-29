@@ -83,6 +83,7 @@ export function registerIpc(agent: Agent, settings: SettingsStore, windows: Wind
   ipcMain.handle('settings:removeAllowedFolder', (_e, path: string) =>
     settings.setAllowedFolders(settings.allowedFolders().filter((f) => f !== path))
   )
+  ipcMain.handle('settings:savePersona', (_e, text: string) => settings.savePersona(text))
   ipcMain.handle('settings:saveSearch', (_e, input: SaveSearchInput) => settings.saveSearch(input))
   ipcMain.handle('settings:testSearch', async (_e, input: SaveSearchInput): Promise<TestResult> => {
     try {

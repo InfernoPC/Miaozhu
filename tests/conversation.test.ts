@@ -17,7 +17,8 @@ beforeAll(async () => {
     activeProfile: () => ({ id: 'p', name: 'mock', kind: 'openai-compatible', baseURL, model: 'mock-model' }),
     getApiKey: () => 'k',
     allowedFolders: () => [sb.path('Documents')],
-    searchCredentials: () => ({ config: { provider: 'none' } })
+    searchCredentials: () => ({ config: { provider: 'none' } }),
+    persona: () => undefined
   }
 })
 afterAll(async () => {

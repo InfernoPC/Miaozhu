@@ -6,6 +6,8 @@ export type Step =
   | { tool: string; args: object }
   | { text: string }
   | { status: number; message: string }
+  /** HTTP 200, then an error event inside the stream (how OpenRouter reports upstream failures). */
+  | { streamError: string; code?: number }
 
 /**
  * A fake OpenAI-compatible server. Each request consumes the next scripted step and is
@@ -32,6 +34,10 @@ export class MockLLM {
           `data: ${JSON.stringify({ id: 'x', object: 'chat.completion.chunk', created: 0, model: parsed.model, choices: [{ index: 0, delta, finish_reason: null }] })}\n\n`
         )
       res.writeHead(200, { 'content-type': 'text/event-stream' })
+      if ('streamError' in step) {
+        res.end(`data: ${JSON.stringify({ error: { message: step.streamError, code: step.code } })}\n\n`)
+        return
+      }
       if ('tool' in step) {
         const args = JSON.stringify(step.args)
         send({ tool_calls: [{ index: 0, id: `call_${this.requests.length}`, type: 'function', function: { name: step.tool, arguments: '' } }] })

@@ -14,6 +14,7 @@ It connects to any OpenAI-compatible API, can use tools on your computer (files,
 - Click the cat to type a question; the reply appears in a speech balloon above it.
 - Double-click for a full chat window with Markdown rendering.
 - Drag files or folders onto the cat to attach them, with quick actions like "summarize" or "translate".
+- Give it your own persona (name, personality, speaking style) in Settings → 角色. Language, honesty, permission and safety rules stay fixed underneath and can't be overridden by the persona.
 
 **Works with the model you have**
 - Any OpenAI-compatible endpoint: OpenAI, Azure OpenAI, OpenRouter, LiteLLM / One API gateways, Ollama, LM Studio, vLLM.

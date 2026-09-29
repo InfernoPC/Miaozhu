@@ -46,6 +46,18 @@ describe('fallback models', () => {
     expect(r.error).toBeInstanceOf(OpenAI.APIError)
   })
 
+  it('falls back when the error arrives inside the stream (HTTP 200)', async () => {
+    llm.reset([{ streamError: 'Upstream error from Nvidia: Service temporarily overloaded', code: 502 }, { text: 'ok' }])
+    const r = await collect('a', ['b'])
+    expect(r.tried).toEqual(['a', 'b'])
+    expect(r.events).toContainEqual({ type: 'text', text: 'ok' })
+  })
+
+  it('falls back on an in-stream overload error even without a code', async () => {
+    llm.reset([{ streamError: 'Service temporarily overloaded' }, { text: 'ok' }])
+    expect((await collect('a', ['b'])).tried).toEqual(['a', 'b'])
+  })
+
   it('reports the last error when every model is busy', async () => {
     llm.reset([
       { status: 429, message: 'busy' },
@@ -64,6 +76,14 @@ describe('describeError', () => {
     const msg = describeError(apiError(429, { message: 'Provider returned error', metadata: { raw: 'x:free is temporarily rate-limited upstream' } }))
     expect(msg).toContain('HTTP 429')
     expect(msg).toContain('rate-limited upstream')
+  })
+
+  it('explains an in-stream overload in plain words, keeping the original reason', async () => {
+    llm.reset([{ streamError: 'Upstream error from Nvidia: Service temporarily overloaded', code: 502 }])
+    const r = await collect('only', [])
+    const msg = describeError(r.error)
+    expect(msg).toContain('稍後再試')
+    expect(msg).toContain('overloaded')
   })
 
   it('explains an invalid key', () => {

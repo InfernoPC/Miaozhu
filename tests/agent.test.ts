@@ -25,7 +25,8 @@ function setup(answer: (req: PermissionRequest) => PermissionDecision | null = (
     activeProfile: () => ({ id: 'p', name: 'mock', kind: 'openai-compatible', baseURL, model: 'mock-model' }),
     getApiKey: () => 'k',
     allowedFolders: () => [sb.path('Documents'), sb.path('Desktop')],
-    searchCredentials: () => ({ config: { provider: 'none' } })
+    searchCredentials: () => ({ config: { provider: 'none' } }),
+    persona: () => undefined
   }
   const events: AgentEvent[] = []
   const prompts: PermissionRequest[] = []

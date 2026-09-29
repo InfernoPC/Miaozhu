@@ -29,7 +29,8 @@ const api: DesktopApi = {
     removeAllowedFolder: (path) => ipcRenderer.invoke('settings:removeAllowedFolder', path),
     saveSearch: (input) => ipcRenderer.invoke('settings:saveSearch', input),
     testSearch: (input) => ipcRenderer.invoke('settings:testSearch', input),
-    openAuditLog: () => ipcRenderer.invoke('settings:openAuditLog')
+    openAuditLog: () => ipcRenderer.invoke('settings:openAuditLog'),
+    savePersona: (text) => ipcRenderer.invoke('settings:savePersona', text)
   },
   files: {
     pathOf: (file) => webUtils.getPathForFile(file)

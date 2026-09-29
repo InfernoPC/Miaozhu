@@ -12,6 +12,7 @@ import type {
 import { blockedRoots } from '../permissions/guard'
 import { displayPath } from '../tools/paths'
 import { readJson, writeJson } from '../util/json-file'
+import { DEFAULT_PERSONA, fixedRules, MAX_PERSONA_CHARS, normalizePersona } from '../agent/prompt'
 
 interface ConfigFile {
   activeProfileId: string | null
@@ -20,6 +21,8 @@ interface ConfigFile {
   /** Missing = defaults (Desktop, Documents, Downloads); an empty list is a deliberate choice. */
   allowedFolders?: string[]
   search?: SearchConfig
+  /** Missing = default persona. */
+  persona?: string
 }
 
 /** Search API keys share the secrets file with profile keys under this id. */
@@ -44,8 +47,25 @@ export class SettingsStore {
       petSkin: this.config.petSkin ?? 'desk',
       allowedFolders: this.allowedFolders(),
       search: { ...this.searchConfig(), hasKey: SEARCH_SECRET_ID in this.secrets },
-      blockedPaths: blockedRoots().map(displayPath)
+      blockedPaths: blockedRoots().map(displayPath),
+      persona: normalizePersona(this.config.persona),
+      personaIsDefault: !this.config.persona?.trim(),
+      defaultPersona: DEFAULT_PERSONA,
+      fixedRules: fixedRules(),
+      maxPersonaChars: MAX_PERSONA_CHARS
     }
+  }
+
+  persona(): string | undefined {
+    return this.config.persona
+  }
+
+  savePersona(text: string): SettingsView {
+    const trimmed = text.trim().slice(0, MAX_PERSONA_CHARS)
+    // Saving the default text verbatim is the same as not customizing it.
+    this.config.persona = trimmed && trimmed !== DEFAULT_PERSONA ? trimmed : undefined
+    this.persist()
+    return this.view()
   }
 
   allowedFolders(): string[] {
