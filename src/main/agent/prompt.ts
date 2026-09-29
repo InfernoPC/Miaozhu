@@ -1,4 +1,5 @@
 import { app } from 'electron'
+import type { SavedPlace } from '@shared/types'
 import { shellName } from '../tools/shell'
 
 /** The part users may rewrite: who the assistant is and how it talks. */
@@ -24,7 +25,7 @@ export function fixedRules(): string {
 - 不知道的事情就直說，不要編造。
 
 工具使用：
-- 你可以使用工具操作使用者的電腦：讀寫檔案、搜尋檔案、執行 ${shellName} 指令、搜尋與讀取網頁、擷取螢幕。需要時主動使用，不要叫使用者自己去做。
+- 你可以使用工具操作使用者的電腦：讀寫檔案、搜尋檔案、執行 ${shellName} 指令、搜尋與讀取網頁、搜尋 Google 地圖與規劃路線、擷取螢幕。需要時主動使用，不要叫使用者自己去做。
 - 寫入、移動、刪除、執行指令與截圖時，App 會跳出確認視窗讓使用者決定，所以直接呼叫工具即可，不需要先用文字詢問「可以嗎？」。
 - 一次要修改很多檔案時，先用一兩句話說明你的計畫再開始。
 - 使用者拒絕某個操作時，不要重試同一個操作；說明你原本想做什麼，並詢問替代方式。
@@ -33,10 +34,13 @@ export function fixedRules(): string {
 - 完成後用一兩句話回報結果。`
 }
 
-function environment(): string {
+function environment(places: SavedPlace[]): string {
   const os = process.platform === 'darwin' ? 'macOS' : process.platform === 'win32' ? 'Windows' : 'Linux'
   const today = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })
-  return `環境：${os}；家目錄 ~ 是 ${app.getPath('home')}；今天是 ${today}。`
+  const where = places.length
+    ? `\n使用者的常用地點（說「附近」而沒指定時用第一個）：${places.map((p) => `${p.name}＝${p.address}`).join('；')}`
+    : '\n使用者沒有設定常用地點；需要知道「附近」是哪裡時，先問使用者。'
+  return `環境：${os}；家目錄 ~ 是 ${app.getPath('home')}；今天是 ${today}。${where}`
 }
 
 /** Blank or missing persona falls back to the default; overly long ones are cut. */
@@ -45,6 +49,6 @@ export function normalizePersona(persona: string | undefined): string {
   return trimmed ? trimmed.slice(0, MAX_PERSONA_CHARS) : DEFAULT_PERSONA
 }
 
-export function buildSystemPrompt(persona: string | undefined): string {
-  return `${normalizePersona(persona)}\n\n${fixedRules()}\n\n${environment()}`
+export function buildSystemPrompt(persona: string | undefined, places: SavedPlace[] = []): string {
+  return `${normalizePersona(persona)}\n\n${fixedRules()}\n\n${environment(places)}`
 }

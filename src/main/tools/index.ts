@@ -1,10 +1,11 @@
 import { fsTools } from './fs'
+import { mapsDirections, mapsSearchPlaces } from './maps'
 import { screenshot } from './screen'
 import { runCommand } from './shell'
 import { ToolError, type ToolDef } from './types'
 import { webFetch, webSearch } from './web'
 
-export const TOOLS: ToolDef[] = [...fsTools, runCommand, webSearch, webFetch, screenshot]
+export const TOOLS: ToolDef[] = [...fsTools, runCommand, webSearch, webFetch, mapsSearchPlaces, mapsDirections, screenshot]
 
 const byName = new Map(TOOLS.map((t) => [t.spec.name, t]))
 

@@ -63,7 +63,8 @@ describe('in a conversation', () => {
         getApiKey: () => 'k',
         allowedFolders: () => [],
         searchCredentials: () => ({ config: { provider: 'none' } }),
-        persona: () => persona
+        persona: () => persona,
+        places: () => []
       },
       () => {}
     )

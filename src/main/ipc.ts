@@ -4,6 +4,7 @@ import {
   PET_SKINS,
   type HitRect,
   type PermissionDecision,
+  type SavedPlace,
   type SaveProfileInput,
   type SaveSearchInput,
   type TestResult
@@ -84,6 +85,7 @@ export function registerIpc(agent: Agent, settings: SettingsStore, windows: Wind
     settings.setAllowedFolders(settings.allowedFolders().filter((f) => f !== path))
   )
   ipcMain.handle('settings:savePersona', (_e, text: string) => settings.savePersona(text))
+  ipcMain.handle('settings:savePlaces', (_e, places: SavedPlace[]) => settings.savePlaces(places))
   ipcMain.handle('settings:saveSearch', (_e, input: SaveSearchInput) => settings.saveSearch(input))
   ipcMain.handle('settings:testSearch', async (_e, input: SaveSearchInput): Promise<TestResult> => {
     try {

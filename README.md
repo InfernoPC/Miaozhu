@@ -32,6 +32,8 @@ It connects to any OpenAI-compatible API, can use tools on your computer (files,
 | Run commands | zsh on macOS, PowerShell on Windows | Every time |
 | Web search | Google (via Serper), Tavily, Brave, or self-hosted SearXNG | No |
 | Read web pages | Intranet and local addresses ask first | Intranet only |
+| Find places on Google Maps | Ratings, review counts, addresses and map links (needs the Serper key) | No |
+| Plan a route | Opens Google Maps directions in your browser; no key needed | No |
 | Screenshot | macOS asks for Screen Recording permission once | Every time |
 
 **Safety**
@@ -55,6 +57,8 @@ If `npm run dev` fails with `Error: Electron uninstall`, the Electron binary did
 ```bash
 node node_modules/electron/install.js
 ```
+
+For "near me" questions, add your usual places (office, home) in Settings → 網路搜尋 → 常用地點. The first one is used as "near me".
 
 On first launch the settings window opens. Pick a connection type, fill in the base URL, API key and model (or use the OpenRouter sign-in), then test and save.
 

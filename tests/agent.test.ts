@@ -26,7 +26,8 @@ function setup(answer: (req: PermissionRequest) => PermissionDecision | null = (
     getApiKey: () => 'k',
     allowedFolders: () => [sb.path('Documents'), sb.path('Desktop')],
     searchCredentials: () => ({ config: { provider: 'none' } }),
-    persona: () => undefined
+    persona: () => undefined,
+    places: () => []
   }
   const events: AgentEvent[] = []
   const prompts: PermissionRequest[] = []

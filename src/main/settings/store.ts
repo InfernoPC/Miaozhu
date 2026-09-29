@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import type {
   PetSkinId,
   ProfileView,
+  SavedPlace,
   ProviderProfile,
   SaveProfileInput,
   SaveSearchInput,
@@ -23,6 +24,7 @@ interface ConfigFile {
   search?: SearchConfig
   /** Missing = default persona. */
   persona?: string
+  places?: SavedPlace[]
 }
 
 /** Search API keys share the secrets file with profile keys under this id. */
@@ -52,8 +54,22 @@ export class SettingsStore {
       personaIsDefault: !this.config.persona?.trim(),
       defaultPersona: DEFAULT_PERSONA,
       fixedRules: fixedRules(),
-      maxPersonaChars: MAX_PERSONA_CHARS
+      maxPersonaChars: MAX_PERSONA_CHARS,
+      places: this.places()
     }
+  }
+
+  places(): SavedPlace[] {
+    return this.config.places ?? []
+  }
+
+  savePlaces(places: SavedPlace[]): SettingsView {
+    this.config.places = places
+      .map((p) => ({ name: p.name.trim(), address: p.address.trim() }))
+      .filter((p) => p.name && p.address)
+      .slice(0, 10)
+    this.persist()
+    return this.view()
   }
 
   persona(): string | undefined {

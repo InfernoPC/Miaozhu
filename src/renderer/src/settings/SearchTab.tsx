@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { SaveSearchInput, SearchProvider, SettingsView, TestResult } from '@shared/types'
+import type { SavedPlace, SaveSearchInput, SearchProvider, SettingsView, TestResult } from '@shared/types'
+import { Icon } from '../common/Icon'
 
 const PROVIDERS: { id: SearchProvider; label: string; needsKey: boolean; hint: string }[] = [
   { id: 'none', label: '不使用', needsKey: false, hint: '喵助將無法上網搜尋，但仍可讀取你提供的網址。' },
@@ -112,6 +113,56 @@ export function SearchTab() {
           </button>
         </div>
       </section>
+
+      <PlacesSection initial={view.places} mapsReady={view.search.provider === 'serper' && view.search.hasKey} />
     </div>
+  )
+}
+
+/** Named places so "餐廳 near me" and "從公司出發" work without GPS. */
+function PlacesSection({ initial, mapsReady }: { initial: SavedPlace[]; mapsReady: boolean }) {
+  const [rows, setRows] = useState<SavedPlace[]>(initial.length ? initial : [{ name: '公司', address: '' }])
+  const [status, setStatus] = useState<TestResult | null>(null)
+  const update = (i: number, patch: Partial<SavedPlace>) => {
+    setRows(rows.map((r, n) => (n === i ? { ...r, ...patch } : r)))
+    setStatus(null)
+  }
+
+  return (
+    <section>
+      <h2>常用地點</h2>
+      <p className="hint">
+        問「附近有什麼好吃的」或「從公司怎麼去」時會用到。第一個是預設的「附近」。這些地點會跟著訊息一起提供給模型。
+        {mapsReady ? '' : '搜尋地點需要上方選擇「Google（透過 Serper）」；路線規劃不需要。'}
+      </p>
+      <ul className="place-list">
+        {rows.map((r, i) => (
+          <li key={i}>
+            <input className="place-name" value={r.name} placeholder="名稱" aria-label="地點名稱" onChange={(e) => update(i, { name: e.target.value })} />
+            <input value={r.address} placeholder="地址，例如 台北市信義區市府路 45 號" aria-label="地址" onChange={(e) => update(i, { address: e.target.value })} />
+            <button className="quiet" aria-label={`移除 ${r.name || '這個地點'}`} onClick={() => setRows(rows.filter((_, n) => n !== i))}>
+              <Icon name="cross" size={14} />
+            </button>
+          </li>
+        ))}
+      </ul>
+      {status && <p className={`status ${status.ok ? 'ok' : 'err'}`}>{status.message}</p>}
+      <div className="actions">
+        <button disabled={rows.length >= 10} onClick={() => setRows([...rows, { name: '', address: '' }])}>
+          <Icon name="plus" size={15} />
+          新增地點
+        </button>
+        <button
+          className="primary"
+          onClick={async () => {
+            const v = await window.api.settings.savePlaces(rows)
+            setRows(v.places.length ? v.places : [{ name: '', address: '' }])
+            setStatus({ ok: true, message: `已儲存 ${v.places.length} 個地點` })
+          }}
+        >
+          儲存地點
+        </button>
+      </div>
+    </section>
   )
 }

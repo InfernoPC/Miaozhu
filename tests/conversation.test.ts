@@ -18,7 +18,8 @@ beforeAll(async () => {
     getApiKey: () => 'k',
     allowedFolders: () => [sb.path('Documents')],
     searchCredentials: () => ({ config: { provider: 'none' } }),
-    persona: () => undefined
+    persona: () => undefined,
+    places: () => []
   }
 })
 afterAll(async () => {

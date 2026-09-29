@@ -41,6 +41,12 @@ export interface SearchConfig {
   baseURL?: string
 }
 
+/** A place the user names often ("公司", "家"), used for "near me" and as a route start. */
+export interface SavedPlace {
+  name: string
+  address: string
+}
+
 export interface SettingsView {
   activeProfileId: string | null
   profiles: ProfileView[]
@@ -57,6 +63,7 @@ export interface SettingsView {
   /** The rules the persona can't override, shown read-only in settings. */
   fixedRules: string
   maxPersonaChars: number
+  places: SavedPlace[]
 }
 
 export interface SaveSearchInput {
@@ -179,6 +186,7 @@ export interface DesktopApi {
     openAuditLog(): Promise<void>
     /** '' restores the default persona. */
     savePersona(text: string): Promise<SettingsView>
+    savePlaces(places: SavedPlace[]): Promise<SettingsView>
   }
   files: {
     /** Absolute path of a dropped File (Electron removed File.path in sandboxed renderers). */

@@ -8,6 +8,7 @@ import type {
   PermissionDecision,
   PermissionRequest,
   ProviderProfile,
+  SavedPlace,
   SearchConfig,
   ToolCallView
 } from '@shared/types'
@@ -29,6 +30,8 @@ export interface AgentSettings {
   searchCredentials(): { config: SearchConfig; apiKey?: string }
   /** The user's persona text; blank means the default. */
   persona(): string | undefined
+  /** Named places for "near me" and route starts. */
+  places(): SavedPlace[]
 }
 
 export interface AgentDeps {
@@ -330,6 +333,6 @@ export class Agent {
               : m
           )
     )
-    return [{ role: 'system', text: buildSystemPrompt(this.settings.persona()) }, ...flattened]
+    return [{ role: 'system', text: buildSystemPrompt(this.settings.persona(), this.settings.places()) }, ...flattened]
   }
 }
