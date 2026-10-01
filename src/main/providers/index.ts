@@ -1,6 +1,8 @@
+import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 import type { ProviderProfile } from '@shared/types'
-import { errorStatus } from './errors'
+import { ClaudeProvider } from './claude'
+import { errorStatus, isApiError } from './errors'
 import { OpenAICompatibleProvider } from './openai-compatible'
 import type { LLMProvider } from './types'
 
@@ -9,7 +11,7 @@ export function createProvider(profile: ProviderProfile, apiKey: string | undefi
     case 'openai-compatible':
       return new OpenAICompatibleProvider(profile, apiKey)
     case 'claude':
-      throw new Error('Claude 連線將在 M4 支援，目前請使用 OpenAI 相容連線')
+      return new ClaudeProvider(profile, apiKey)
   }
 }
 
@@ -33,14 +35,14 @@ export function describeError(err: unknown): string {
   if (code?.includes('CERT')) {
     return 'HTTPS 憑證無法驗證（' + code + '），公司內部 gateway 可能需要安裝公司根憑證'
   }
-  if (err instanceof OpenAI.APIConnectionError) {
+  if (err instanceof OpenAI.APIConnectionError || err instanceof Anthropic.APIConnectionError) {
     return '無法連線到伺服器，請確認 Base URL 正確、服務已啟動，以及網路 / VPN 已連線'
   }
   return e.message ?? String(err)
 }
 
 function serverDetail(err: unknown): string | undefined {
-  if (!(err instanceof OpenAI.APIError)) return undefined
+  if (!isApiError(err)) return undefined
   const body = err.error as { message?: unknown; metadata?: { raw?: unknown } } | undefined
   const raw = body?.metadata?.raw
   const text = typeof raw === 'string' ? raw : typeof body?.message === 'string' ? body.message : undefined

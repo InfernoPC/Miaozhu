@@ -15,6 +15,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
     "@fontsource/huninn": "^5.3.0",
     "@modelcontextprotocol/sdk": "^1.31.0",
     "cross-spawn": "^7.0.6",

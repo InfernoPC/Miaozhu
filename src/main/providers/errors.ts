@@ -1,4 +1,10 @@
+import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
+
+/** Both SDKs' API errors share status / error-body / message. */
+export function isApiError(err: unknown): err is { status?: number; error?: unknown; message: string } {
+  return err instanceof OpenAI.APIError || err instanceof Anthropic.APIError
+}
 
 /**
  * The HTTP-like status of a provider error. Gateways such as OpenRouter sometimes answer
@@ -7,7 +13,7 @@ import OpenAI from 'openai'
  * so fallback and error messages treat them like the HTTP versions.
  */
 export function errorStatus(err: unknown): number | undefined {
-  if (!(err instanceof OpenAI.APIError)) return undefined
+  if (!isApiError(err)) return undefined
   if (typeof err.status === 'number') return err.status
   const code = (err.error as { code?: unknown } | undefined)?.code
   if (typeof code === 'number' && code >= 400) return code

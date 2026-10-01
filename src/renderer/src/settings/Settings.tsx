@@ -9,6 +9,7 @@ import './settings.css'
 
 interface Preset {
   label: string
+  kind?: ProviderProfile['kind']
   name: string
   baseURL: string
   model: string
@@ -34,6 +35,14 @@ const PRESETS: Preset[] = [
     baseURL: 'https://',
     model: '',
     hint: '填入 IT 提供的 Base URL（通常以 /v1 結尾）、API Key 與模型名稱。LiteLLM、One API 等 gateway 都適用。'
+  },
+  {
+    label: 'Claude（Anthropic）',
+    kind: 'claude',
+    name: 'Claude',
+    baseURL: 'https://api.anthropic.com',
+    model: 'claude-opus-5-5',
+    hint: '貼上 Claude Console 的 API Key（sk-ant- 開頭）。預設使用 Claude Opus 5.5；遇到安全分類器拒絕時，Anthropic 會在伺服器端自動改用適合的模型回答。'
   },
   {
     label: 'OpenRouter',
@@ -79,7 +88,7 @@ const PRESETS: Preset[] = [
 
 const newProfile = (preset: Preset): ProviderProfile => ({
   id: crypto.randomUUID(),
-  kind: 'openai-compatible',
+  kind: preset.kind ?? 'openai-compatible',
   name: preset.name,
   baseURL: preset.baseURL,
   model: preset.model,

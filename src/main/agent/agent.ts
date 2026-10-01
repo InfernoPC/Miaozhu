@@ -15,7 +15,7 @@ import type {
 import { audit, PermissionGuard } from '../permissions/guard'
 import { createProvider, describeError } from '../providers'
 import { errorStatus } from '../providers/errors'
-import type { LLMMessage, ToolCall, UserContent } from '../providers/types'
+import type { LLMMessage, ProviderData, ToolCall, UserContent } from '../providers/types'
 import { isImagePath, readForModel } from '../tools/fs'
 import { parseArgs, TOOLS, ToolError, type ToolDef } from '../tools'
 import { displayPath, expandPath, realPath } from '../tools/paths'
@@ -212,6 +212,7 @@ export class Agent {
         const toolKey = `${profile.id}:${profile.model}`
         let text = ''
         let calls: ToolCall[] = []
+        let providerData: ProviderData | undefined
         const useTools = !this.noTools.has(toolKey)
         const tools = this.availableTools()
         try {
@@ -222,6 +223,7 @@ export class Agent {
           })) {
             if (ev.type === 'model') assistant.model = ev.model
             else if (ev.type === 'tool-calls') calls = ev.calls
+            else if (ev.type === 'provider-data') providerData = ev.data
             else {
               text += ev.text
               this.appendText(assistant, ev.text)
@@ -235,7 +237,7 @@ export class Agent {
           continue
         }
 
-        turn.push({ role: 'assistant', text, toolCalls: calls.length ? calls : undefined })
+        turn.push({ role: 'assistant', text, toolCalls: calls.length ? calls : undefined, providerData })
         if (!calls.length) break
 
         const images: string[] = []
