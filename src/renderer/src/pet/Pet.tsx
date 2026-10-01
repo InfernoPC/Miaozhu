@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { AttachmentView, PermissionRequest, PetSkinId, PetState } from '@shared/types'
+import type { AttachmentView, DueReminder, PermissionRequest, PetSkinId, PetState } from '@shared/types'
 import { AttachmentChips, droppedPaths } from '../common/AttachmentChips'
 import { Icon } from '../common/Icon'
 import { Markdown } from '../common/Markdown'
@@ -32,6 +32,7 @@ export function Pet() {
   const [bubble, setBubble] = useState<Bubble | null>(null)
   const [toolStatus, setToolStatus] = useState<string | null>(null)
   const [permissions, setPermissions] = useState<PermissionRequest[]>([])
+  const [due, setDue] = useState<DueReminder[]>([])
   const [inputOpen, setInputOpen] = useState(false)
   const [draft, setDraft] = useState('')
   const [attachments, setAttachments] = useState<AttachmentView[]>([])
@@ -55,6 +56,24 @@ export function Pet() {
     sleepTimer.current = window.setTimeout(() => {
       if (!busyRef.current) setState('sleeping')
     }, SLEEP_AFTER_MS)
+  }
+
+  // Due reminders queue up; the cat jumps until each one is answered.
+  useEffect(
+    () =>
+      window.api.reminders.onDue((r) => {
+        setDue((list) => (list.some((x) => x.id === r.id) ? list : [...list, r]))
+        setState('alert')
+      }),
+    []
+  )
+  const answerReminder = (r: DueReminder, action: 'dismiss' | 'snooze') => {
+    void (action === 'dismiss' ? window.api.reminders.dismiss(r.id) : window.api.reminders.snooze(r.id, 10))
+    setDue((list) => {
+      const rest = list.filter((x) => x.id !== r.id)
+      if (!rest.length) setState((s) => (s === 'alert' ? 'idle' : s))
+      return rest
+    })
   }
 
   useEffect(() => {
@@ -219,6 +238,7 @@ export function Pet() {
 
   const Character = SKINS[skin] ?? SKINS.desk
   const permission = permissions[0]
+  const reminder = due[0]
   const quick = attachments.length ? QUICK_ACTIONS[attachments[0].kind] : []
 
   return (
@@ -228,6 +248,24 @@ export function Pet() {
           <div className="bubble hit">
             <PermissionPrompt request={permission} compact />
             {permissions.length > 1 && <div className="bubble-more">還有 {permissions.length - 1} 個操作等待確認</div>}
+          </div>
+        ) : reminder ? (
+          <div className="bubble hit bubble-reminder" role="alert">
+            <p className="reminder-kicker">{reminder.late ? '錯過的提醒' : '提醒'}</p>
+            <p className="reminder-text">{reminder.text}</p>
+            <p className="reminder-when">
+              {new Date(reminder.at).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}
+              {due.length > 1 ? `，還有 ${due.length - 1} 個` : ''}
+            </p>
+            <div className="bubble-actions">
+              <button className="primary" autoFocus onClick={() => answerReminder(reminder, 'dismiss')}>
+                好
+              </button>
+              <button onClick={() => answerReminder(reminder, 'snooze')}>10 分鐘後</button>
+              <button className="quiet" onClick={() => window.api.windows.openChat()}>
+                打開對話
+              </button>
+            </div>
           </div>
         ) : (
           (bubble || toolStatus) && (

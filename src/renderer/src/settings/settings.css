@@ -176,3 +176,8 @@ pre.mcp-error { margin: 2px 0 0; font: 11.5px/1.5 var(--font-code); white-space:
 .badge-off { color: var(--graphite); }
 .entry-unsupported .entry-title strong, .entry-unsupported .entry-desc { color: var(--graphite); }
 .catalog > li > button { flex-shrink: 0; margin-top: 2px; }
+
+.reminder-row { gap: 12px; flex-wrap: wrap; }
+.reminder-row strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.quiet-row { align-items: center; }
+.quiet-row input[type='time'] { width: 8.5em; }

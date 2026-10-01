@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { AgentEvent, DesktopApi, PetSkinId } from '@shared/types'
+import type { AgentEvent, DesktopApi, DueReminder, PetSkinId } from '@shared/types'
 
 const api: DesktopApi = {
   agent: {
@@ -46,6 +46,20 @@ const api: DesktopApi = {
       ipcRenderer.on('plugins:changed', listener)
       return () => ipcRenderer.removeListener('plugins:changed', listener)
     }
+  },
+  reminders: {
+    list: () => ipcRenderer.invoke('reminders:list'),
+    cancel: (id) => ipcRenderer.invoke('reminders:cancel', id),
+    dismiss: (id) => ipcRenderer.invoke('reminders:dismiss', id),
+    snooze: (id, minutes) => ipcRenderer.invoke('reminders:snooze', id, minutes),
+    onDue: (cb) => {
+      const listener = (_e: Electron.IpcRendererEvent, r: DueReminder) => cb(r)
+      ipcRenderer.on('reminder:due', listener)
+      return () => ipcRenderer.removeListener('reminder:due', listener)
+    },
+    dnd: () => ipcRenderer.invoke('reminders:dnd'),
+    setDnd: (minutes) => ipcRenderer.invoke('reminders:setDnd', minutes),
+    setQuietHours: (start, end) => ipcRenderer.invoke('reminders:setQuietHours', start, end)
   },
   marketplaces: {
     list: () => ipcRenderer.invoke('marketplaces:list'),

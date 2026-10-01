@@ -16,11 +16,35 @@ import { createProvider, describeError } from './providers'
 import { auditLogPath } from './permissions/guard'
 import type { PluginManager } from './plugins/manager'
 import type { MarketplaceManager } from './plugins/marketplaces'
+import type { ReminderService } from './reminders/service'
 import type { SettingsStore } from './settings/store'
 import { searchWeb } from './tools/web'
 import type { WindowManager } from './windows'
 
 const TEST_TIMEOUT_MS = 20_000
+
+/** Minutes until tomorrow 9:00, for "until tomorrow morning". */
+function minutesUntilMorning(): number {
+  const now = new Date()
+  const morning = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 9, 0)
+  return Math.ceil((morning.getTime() - now.getTime()) / 60_000)
+}
+
+function dndMenu(reminders: ReminderService): Electron.MenuItemConstructorOptions {
+  const dnd = reminders.dnd()
+  const until = dnd.until && new Date(dnd.until) > new Date() ? new Date(dnd.until) : null
+  const label = until ? `勿擾中（到 ${until.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })}）` : dnd.active ? '勿擾中（安靜時段）' : '勿擾模式'
+  return {
+    label,
+    submenu: [
+      { label: '1 小時', click: () => reminders.setDnd(60) },
+      { label: '3 小時', click: () => reminders.setDnd(180) },
+      { label: '直到明天早上 9 點', click: () => reminders.setDnd(minutesUntilMorning()) },
+      { type: 'separator' },
+      { label: '關閉勿擾', enabled: !!until, click: () => reminders.setDnd(null) }
+    ]
+  }
+}
 
 async function testConnection(settings: SettingsStore, input: SaveProfileInput): Promise<TestResult> {
   const controller = new AbortController()
@@ -51,8 +75,17 @@ export function registerIpc(
   settings: SettingsStore,
   windows: WindowManager,
   plugins: PluginManager,
-  marketplaces: MarketplaceManager
+  marketplaces: MarketplaceManager,
+  reminders: ReminderService
 ): void {
+  ipcMain.handle('reminders:list', () => reminders.list())
+  ipcMain.handle('reminders:cancel', (_e, id: string) => (reminders.cancel(id), reminders.list()))
+  ipcMain.handle('reminders:dismiss', (_e, id: string) => reminders.dismiss(id))
+  ipcMain.handle('reminders:snooze', (_e, id: string, minutes: number) => reminders.snooze(id, minutes))
+  ipcMain.handle('reminders:dnd', () => reminders.dnd())
+  ipcMain.handle('reminders:setDnd', (_e, minutes: number | null) => reminders.setDnd(minutes))
+  ipcMain.handle('reminders:setQuietHours', (_e, start: string | null, end: string | null) => reminders.setQuietHours(start, end))
+
   ipcMain.handle('plugins:list', () => plugins.list())
   ipcMain.handle('plugins:inspect', async (e, source: PluginSource) => {
     if (source.kind === 'git') return plugins.inspect(source)
@@ -183,6 +216,7 @@ export function registerIpc(
           }
         }))
       },
+      dndMenu(reminders),
       { label: '清除對話', click: () => agent.clear() },
       { type: 'separator' },
       { label: '設定…', click: () => windows.openSettings() },

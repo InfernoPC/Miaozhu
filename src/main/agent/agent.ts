@@ -43,6 +43,8 @@ export interface PluginSource {
 
 export interface AgentDeps {
   hidePet(): Promise<() => void>
+  /** Built-in tools that need app services (e.g. reminders), added after the static ones. */
+  extraTools?: ToolDef[]
   plugins?: PluginSource
   /** Where the conversation is saved between launches; omitted in tests that don't care. */
   store?: ConversationStore
@@ -242,8 +244,9 @@ export class Agent {
 
   /** Built-ins first, then whatever enabled plugins offer right now. */
   private availableTools(): ToolDef[] {
-    const plugin = this.deps.plugins?.tools(new Set(TOOLS.map((t) => t.spec.name))) ?? []
-    return [...TOOLS, ...plugin]
+    const builtin = [...TOOLS, ...(this.deps.extraTools ?? [])]
+    const plugin = this.deps.plugins?.tools(new Set(builtin.map((t) => t.spec.name))) ?? []
+    return [...builtin, ...plugin]
   }
 
   private async runTool(call: ToolCall, tools: ToolDef[], assistant: ChatMessage, signal: AbortSignal): Promise<{ text: string; images?: string[] }> {

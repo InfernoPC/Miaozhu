@@ -3,6 +3,7 @@ import { isOpenRouterURL, MAX_FALLBACK_MODELS, type ProviderProfile, type SavePr
 import { FoldersTab } from './FoldersTab'
 import { PersonaTab } from './PersonaTab'
 import { PluginsTab } from './PluginsTab'
+import { RemindersTab } from './RemindersTab'
 import { SearchTab } from './SearchTab'
 import './settings.css'
 
@@ -440,6 +441,7 @@ const TABS = [
   { id: 'persona', label: '角色', View: PersonaTab },
   { id: 'folders', label: '檔案權限', View: FoldersTab },
   { id: 'search', label: '網路搜尋', View: SearchTab },
+  { id: 'reminders', label: '提醒', View: RemindersTab },
   { id: 'plugins', label: '外掛', View: PluginsTab }
 ] as const
 

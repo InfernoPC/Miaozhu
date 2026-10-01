@@ -149,6 +149,34 @@ export interface TestResult {
   message: string
 }
 
+// ── Reminders (M4) ─────────────────────────────────────────────────────────
+
+export type ReminderRepeat = 'none' | 'daily' | 'weekdays' | 'weekly' | 'monthly'
+
+export interface ReminderView {
+  id: string
+  text: string
+  /** Next time it fires, ISO. */
+  at: string
+  repeat: ReminderRepeat
+}
+
+/** A reminder that has come due, as delivered to the pet. */
+export interface DueReminder extends ReminderView {
+  /** Fired late because the app was closed (or do-not-disturb held it). */
+  late: boolean
+}
+
+export interface DndView {
+  /** Manual do-not-disturb until this time, ISO. */
+  until?: string
+  /** Daily quiet hours, 'HH:mm'. */
+  quietStart?: string
+  quietEnd?: string
+  /** Whether do-not-disturb is in effect right now. */
+  active: boolean
+}
+
 // ── Plugins (M3) ───────────────────────────────────────────────────────────
 
 export interface PluginSkillView {
@@ -286,6 +314,18 @@ export interface DesktopApi {
     remove(id: string): Promise<PluginView[]>
     setSecret(id: string, name: string, value: string): Promise<PluginView[]>
     onChange(cb: () => void): () => void
+  }
+  reminders: {
+    list(): Promise<ReminderView[]>
+    cancel(id: string): Promise<ReminderView[]>
+    /** Dismiss a due reminder (repeating ones move to their next time). */
+    dismiss(id: string): Promise<void>
+    snooze(id: string, minutes: number): Promise<void>
+    onDue(cb: (r: DueReminder) => void): () => void
+    dnd(): Promise<DndView>
+    /** minutes = null turns manual do-not-disturb off. */
+    setDnd(minutes: number | null): Promise<DndView>
+    setQuietHours(start: string | null, end: string | null): Promise<DndView>
   }
   marketplaces: {
     list(): Promise<MarketplaceView[]>

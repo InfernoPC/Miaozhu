@@ -112,3 +112,9 @@
 .cat-hit:active { cursor: grabbing; }
 /* A file hovering over the cat: its paw pads light up (drop-shadow in pink). */
 .cat-hit.drag-over { filter: drop-shadow(0 0 6px var(--pawpad)) drop-shadow(0 0 2px var(--pawpad)); }
+
+/* A due reminder: the same balloon, with the text as the headline. */
+.bubble-reminder .reminder-kicker { margin: 0; font-size: 12px; color: var(--pawpad-deep); font-weight: 600; }
+.bubble-reminder .reminder-text { margin: 2px 0 0; font-family: var(--font-voice); font-size: 18px; line-height: 1.4; }
+.bubble-reminder .reminder-when { margin: 2px 0 0; font-size: 12px; color: var(--graphite); }
+.bubble-reminder .bubble-actions { justify-content: flex-start; gap: 6px; margin-top: 8px; }

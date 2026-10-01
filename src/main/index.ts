@@ -1,10 +1,12 @@
-import { app } from 'electron'
+import { app, Notification } from 'electron'
 import type { AgentEvent } from '@shared/types'
 import { Agent } from './agent/agent'
 import { ConversationStore } from './agent/conversation-store'
 import { registerIpc } from './ipc'
 import { PluginManager } from './plugins/manager'
 import { MarketplaceManager } from './plugins/marketplaces'
+import { ReminderService } from './reminders/service'
+import { reminderTools } from './tools/reminders'
 import { adoptLoginShellPath } from './util/shell-path'
 import { SettingsStore } from './settings/store'
 import { WindowManager } from './windows'
@@ -28,14 +30,29 @@ app.whenReady().then(async () => {
   }
   const plugins = new PluginManager(settings.vault(), notifyPlugins)
   const marketplaces = new MarketplaceManager({}, notifyPlugins)
+  const reminders = new ReminderService({
+    deliver: (r) => {
+      for (const win of windows.all()) if (!win.isDestroyed()) win.webContents.send('reminder:due', r)
+      if (Notification.isSupported()) {
+        const n = new Notification({ title: r.late ? '喵助：錯過的提醒' : '喵助提醒', body: r.text, silent: false })
+        n.on('click', () => windows.openChat())
+        n.show()
+      }
+    }
+  })
   const agent = new Agent(settings, broadcast, {
     hidePet: () => windows.hidePet(),
     store: new ConversationStore(),
-    plugins
+    plugins,
+    extraTools: reminderTools(reminders)
   })
-  registerIpc(agent, settings, windows, plugins, marketplaces)
+  registerIpc(agent, settings, windows, plugins, marketplaces, reminders)
+  reminders.start()
   void plugins.start()
-  app.on('before-quit', () => void plugins.stopAll())
+  app.on('before-quit', () => {
+    reminders.stop()
+    void plugins.stopAll()
+  })
 
   windows.createPet()
   // First run: nothing configured yet, so guide the user straight to settings.
