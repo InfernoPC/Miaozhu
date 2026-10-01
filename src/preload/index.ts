@@ -47,6 +47,14 @@ const api: DesktopApi = {
       return () => ipcRenderer.removeListener('plugins:changed', listener)
     }
   },
+  conversations: {
+    list: () => ipcRenderer.invoke('conversations:list'),
+    current: () => ipcRenderer.invoke('conversations:current'),
+    open: (id) => ipcRenderer.invoke('conversations:open', id),
+    create: () => ipcRenderer.invoke('conversations:create'),
+    rename: (id, title) => ipcRenderer.invoke('conversations:rename', id, title),
+    remove: (id) => ipcRenderer.invoke('conversations:remove', id)
+  },
   reminders: {
     list: () => ipcRenderer.invoke('reminders:list'),
     cancel: (id) => ipcRenderer.invoke('reminders:cancel', id),

@@ -6,6 +6,7 @@ import { Markdown } from '../common/Markdown'
 import { PermissionPrompt } from '../common/PermissionPrompt'
 import { groupParts, ToolLog } from '../common/ToolCard'
 import { DeskCat } from '../pet/DeskCat'
+import { ConversationDrawer } from './ConversationDrawer'
 import './chat.css'
 
 /** Starting points that show what the cat can actually do. */
@@ -49,11 +50,14 @@ export function Chat() {
   const [draft, setDraft] = useState('')
   const [attachments, setAttachments] = useState<AttachmentView[]>([])
   const [dragOver, setDragOver] = useState(false)
+  const [drawer, setDrawer] = useState(false)
+  const [conversationId, setConversationId] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     void window.api.agent.history().then(setMessages)
     void window.api.agent.pendingPermissions().then(setPermissions)
+    void window.api.conversations.current().then(setConversationId)
     const update = (id: string, fn: (m: ChatMessage) => ChatMessage) => setMessages((ms) => ms.map((m) => (m.id === id ? fn(m) : m)))
     return window.api.agent.onEvent((e) => {
       if (e.type === 'turn-start') {
@@ -70,10 +74,11 @@ export function Chat() {
         setPermissions((ps) => [...ps, e.request])
       } else if (e.type === 'permission-resolved') {
         setPermissions((ps) => ps.filter((p) => p.id !== e.id))
-      } else if (e.type === 'history-cleared') {
+      } else if (e.type === 'history-cleared' || e.type === 'conversation-changed') {
         setStreamingId(null)
-        setMessages([])
         setPermissions([])
+        if (e.type === 'conversation-changed') setConversationId(e.id)
+        void window.api.agent.history().then(setMessages)
       }
     })
   }, [])
@@ -114,14 +119,19 @@ export function Chat() {
       onDrop={onDrop}
     >
       <header className="chat-header">
-        <h1 className="chat-title">
-          <CatMark />
-          喵助
-        </h1>
+        <div className="chat-title-row">
+          <button className="quiet drawer-toggle" aria-label="對話紀錄" aria-expanded={drawer} onClick={() => setDrawer(true)}>
+            <Icon name="menu" size={17} />
+          </button>
+          <h1 className="chat-title">
+            <CatMark />
+            喵助
+          </h1>
+        </div>
         <div className="chat-header-actions">
-          <button className="quiet" onClick={() => window.api.agent.clear()} disabled={messages.length === 0} title="清除對話，也會收回「這次對話都允許」的授權">
-            <Icon name="sweep" size={15} />
-            清除對話
+          <button className="quiet" onClick={() => window.api.conversations.create()} disabled={messages.length === 0} title="開始新對話，目前的對話會留在對話紀錄裡">
+            <Icon name="plus" size={15} />
+            新對話
           </button>
           <button className="quiet" onClick={() => window.api.windows.openSettings()}>
             <Icon name="gear" size={15} />
@@ -207,6 +217,7 @@ export function Chat() {
           )}
         </div>
       </form>
+      {drawer && <ConversationDrawer currentId={conversationId} onClose={() => setDrawer(false)} />}
       {dragOver && <div className="drop-overlay">放開，把檔案交給喵助</div>}
     </div>
   )

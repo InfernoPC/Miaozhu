@@ -17,6 +17,7 @@ import { auditLogPath } from './permissions/guard'
 import type { PluginManager } from './plugins/manager'
 import type { MarketplaceManager } from './plugins/marketplaces'
 import type { ReminderService } from './reminders/service'
+import type { ConversationStore } from './agent/conversation-store'
 import type { SettingsStore } from './settings/store'
 import { searchWeb } from './tools/web'
 import type { WindowManager } from './windows'
@@ -76,8 +77,16 @@ export function registerIpc(
   windows: WindowManager,
   plugins: PluginManager,
   marketplaces: MarketplaceManager,
-  reminders: ReminderService
+  reminders: ReminderService,
+  conversations: ConversationStore
 ): void {
+  ipcMain.handle('conversations:list', () => conversations.list())
+  ipcMain.handle('conversations:current', () => agent.currentConversation())
+  ipcMain.handle('conversations:open', (_e, id: string) => agent.openConversation(id))
+  ipcMain.handle('conversations:create', () => agent.newConversation())
+  ipcMain.handle('conversations:rename', (_e, id: string, title: string) => (conversations.rename(id, title), conversations.list()))
+  ipcMain.handle('conversations:remove', (_e, id: string) => (agent.deleteConversation(id), conversations.list()))
+
   ipcMain.handle('reminders:list', () => reminders.list())
   ipcMain.handle('reminders:cancel', (_e, id: string) => (reminders.cancel(id), reminders.list()))
   ipcMain.handle('reminders:dismiss', (_e, id: string) => reminders.dismiss(id))
@@ -217,7 +226,7 @@ export function registerIpc(
         }))
       },
       dndMenu(reminders),
-      { label: '清除對話', click: () => agent.clear() },
+      { label: '新對話', click: () => agent.newConversation() },
       { type: 'separator' },
       { label: '設定…', click: () => windows.openSettings() },
       { type: 'separator' },

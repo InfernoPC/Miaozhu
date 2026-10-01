@@ -124,7 +124,7 @@ export function Pet() {
           setState((s) => (s === 'error' ? 'idle' : s))
         }, bubbleDuration(text))
         wake()
-      } else if (e.type === 'history-cleared') {
+      } else if (e.type === 'history-cleared' || e.type === 'conversation-changed') {
         markBusy(false)
         setBubble(null)
         setToolStatus(null)

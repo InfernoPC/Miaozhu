@@ -62,3 +62,38 @@
 .chat-empty-cat .desk-cat .dc-edge { stroke: var(--ink); }
 .chat-empty-cat .desk-cat .dc-eye { fill: var(--ink); }
 .chat-empty-cat .desk-cat .dc-edge-halo { stroke: var(--paper); }
+
+/* ── Conversation drawer ─────────────────────────────────────────────────── */
+.chat-title-row { display: flex; align-items: center; gap: 4px; }
+.drawer-toggle { padding: 4px 6px; }
+.drawer-scrim { position: absolute; inset: 0; background: color-mix(in srgb, var(--ink) 18%, transparent); z-index: 10; }
+.drawer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: min(86%, 320px);
+  background: var(--paper);
+  border-right: 2px solid var(--ink);
+  z-index: 11;
+  display: flex;
+  flex-direction: column;
+  animation: drawer-in 0.18s ease-out;
+}
+@keyframes drawer-in { from { transform: translateX(-24px); opacity: 0; } }
+.drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 10px 8px 16px; border-bottom: 1.5px solid var(--rule); }
+.drawer-head h2 { margin: 0; font: 400 17px var(--font-voice); }
+.conv-list { list-style: none; margin: 0; padding: 6px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.conv-list > li { border-radius: var(--radius-m); display: flex; align-items: center; gap: 2px; padding: 2px 4px 2px 0; }
+.conv-list > li:hover { background: var(--paper-2); }
+.conv-list > li.current { background: var(--blush); }
+.conv-open { flex: 1; min-width: 0; border: none; text-align: left; display: flex; flex-direction: column; align-items: stretch; gap: 1px; padding: 7px 10px; background: none; }
+.conv-open:hover:not(:disabled) { border: none; }
+.conv-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conv-meta { font-size: 11.5px; color: var(--graphite); }
+.conv-actions { display: none; }
+.conv-list > li:hover .conv-actions, .conv-list > li:focus-within .conv-actions { display: flex; }
+.conv-actions button { font-size: 12px; padding: 3px 6px; }
+.conv-edit, .conv-confirm { flex: 1; display: flex; align-items: center; gap: 4px; padding: 4px 6px; }
+.conv-confirm span { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conv-empty { padding: 12px; }

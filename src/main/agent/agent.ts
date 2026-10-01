@@ -84,11 +84,49 @@ export class Agent {
       () => this.settings.allowedFolders(),
       (req) => this.askUser(req)
     )
-    const saved = deps.store?.load()
-    if (saved) {
+    // Reopen whatever conversation was open last time.
+    const current = deps.store?.current()
+    const saved = current ? deps.store?.load(current) : null
+    if (current && saved) {
+      this.conversationId = current
       this.history = saved.history
       this.turns = saved.turns
     }
+  }
+
+  /** The open conversation; a new one has an id before it's first saved. */
+  private conversationId: string = randomUUID()
+
+  currentConversation(): string {
+    return this.conversationId
+  }
+
+  /** Switches to a saved conversation. Grants from the previous one don't carry over. */
+  openConversation(id: string): void {
+    const saved = this.deps.store?.load(id)
+    if (!saved) return
+    this.switchTo(id, saved.history, saved.turns)
+    this.deps.store?.setCurrent(id)
+  }
+
+  /** Starts an empty conversation; the previous one stays saved in the list. */
+  newConversation(): void {
+    this.switchTo(randomUUID(), [], [])
+    this.deps.store?.setCurrent(undefined)
+  }
+
+  deleteConversation(id: string): void {
+    this.deps.store?.remove(id)
+    if (id === this.conversationId) this.newConversation()
+  }
+
+  private switchTo(id: string, history: ChatMessage[], turns: LLMMessage[][]): void {
+    this.cancel()
+    this.conversationId = id
+    this.history = history
+    this.turns = turns
+    this.guard.resetSession()
+    this.broadcast({ type: 'conversation-changed', id })
   }
 
   getHistory(): ChatMessage[] {
@@ -107,13 +145,9 @@ export class Agent {
     p.resolve(decision)
   }
 
+  /** "清除對話": start fresh. The old conversation is kept in the list. */
   clear(): void {
-    this.cancel()
-    this.history = []
-    this.turns = []
-    this.guard.resetSession()
-    this.deps.store?.clear()
-    this.broadcast({ type: 'history-cleared' })
+    this.newConversation()
   }
 
   cancel(): void {
@@ -145,7 +179,10 @@ export class Agent {
       createdAt: Date.now()
     }
     const assistant: ChatMessage = { id: randomUUID(), role: 'assistant', text: '', parts: [], createdAt: Date.now() }
-    this.history.push(userMessage)
+    // The turn belongs to the conversation it started in, even if the user switches away.
+    const conversationId = this.conversationId
+    const history = this.history
+    history.push(userMessage)
     this.broadcast({ type: 'turn-start', userMessage, assistantId: assistant.id })
 
     const controller = new AbortController()
@@ -219,9 +256,11 @@ export class Agent {
         this.broadcast({ type: 'permission-resolved', id })
         p.resolve('deny')
       }
-      this.history.push(assistant)
-      this.deps.store?.save({ history: this.history, turns: this.turns })
-      this.broadcast({ type: 'turn-end', message: assistant })
+      history.push(assistant)
+      if (conversationId === this.conversationId) {
+        this.deps.store?.save(conversationId, { history, turns: this.turns })
+        this.broadcast({ type: 'turn-end', message: assistant })
+      }
     }
   }
 

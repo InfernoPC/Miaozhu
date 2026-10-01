@@ -115,6 +115,13 @@ export interface ChatMessage {
   model?: string
 }
 
+export interface ConversationSummary {
+  id: string
+  title: string
+  updatedAt: string
+  messageCount: number
+}
+
 export type ToolRisk = 'read' | 'network' | 'screen' | 'write' | 'execute'
 
 export interface PermissionRequest {
@@ -143,6 +150,8 @@ export type AgentEvent =
   | { type: 'permission-resolved'; id: string }
   | { type: 'turn-end'; message: ChatMessage }
   | { type: 'history-cleared' }
+  /** Another conversation was opened (or a new one started); windows reload the history. */
+  | { type: 'conversation-changed'; id: string }
 
 export interface TestResult {
   ok: boolean
@@ -314,6 +323,15 @@ export interface DesktopApi {
     remove(id: string): Promise<PluginView[]>
     setSecret(id: string, name: string, value: string): Promise<PluginView[]>
     onChange(cb: () => void): () => void
+  }
+  conversations: {
+    list(): Promise<ConversationSummary[]>
+    current(): Promise<string>
+    open(id: string): Promise<void>
+    /** Starts an empty conversation; the current one stays in the list. */
+    create(): Promise<void>
+    rename(id: string, title: string): Promise<ConversationSummary[]>
+    remove(id: string): Promise<ConversationSummary[]>
   }
   reminders: {
     list(): Promise<ReminderView[]>

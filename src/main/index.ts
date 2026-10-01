@@ -40,13 +40,14 @@ app.whenReady().then(async () => {
       }
     }
   })
+  const conversations = new ConversationStore()
   const agent = new Agent(settings, broadcast, {
     hidePet: () => windows.hidePet(),
-    store: new ConversationStore(),
+    store: conversations,
     plugins,
     extraTools: reminderTools(reminders)
   })
-  registerIpc(agent, settings, windows, plugins, marketplaces, reminders)
+  registerIpc(agent, settings, windows, plugins, marketplaces, reminders, conversations)
   reminders.start()
   void plugins.start()
   app.on('before-quit', () => {
