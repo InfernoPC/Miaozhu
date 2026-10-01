@@ -149,6 +149,57 @@ export interface TestResult {
   message: string
 }
 
+// ── Plugins (M3) ───────────────────────────────────────────────────────────
+
+export interface PluginSkillView {
+  name: string
+  description: string
+}
+
+export interface PluginMcpView {
+  name: string
+  /** What will run: the command line for stdio servers, the URL for HTTP ones. */
+  target: string
+  status: 'stopped' | 'starting' | 'running' | 'error'
+  error?: string
+  toolCount: number
+}
+
+export interface PluginToolView {
+  name: string
+  kind: 'http' | 'cli'
+  risk: ToolRisk
+  description: string
+  /** Where it sends requests / what it runs, for the install review. */
+  target: string
+}
+
+export interface PluginView {
+  /** Folder name under the plugins directory; unique. */
+  id: string
+  name: string
+  version?: string
+  description?: string
+  enabled: boolean
+  skills: PluginSkillView[]
+  mcpServers: PluginMcpView[]
+  tools: PluginToolView[]
+  /** `${secret:name}` placeholders its tools use, and whether each has a value. */
+  secrets: { name: string; isSet: boolean }[]
+  /** Problems found while reading it (a bad YAML file, a name clash…). */
+  warnings: string[]
+}
+
+export type PluginSource = { kind: 'folder' } | { kind: 'zip' } | { kind: 'git'; url: string }
+
+/** A plugin read into a staging area, shown for review before it's installed. */
+export interface PluginPreview {
+  stagingId: string
+  plugin: PluginView
+  /** Set when a plugin with the same id exists and installing would replace it. */
+  replaces?: string
+}
+
 export interface HitRect {
   x: number
   y: number
@@ -187,6 +238,17 @@ export interface DesktopApi {
     /** '' restores the default persona. */
     savePersona(text: string): Promise<SettingsView>
     savePlaces(places: SavedPlace[]): Promise<SettingsView>
+  }
+  plugins: {
+    list(): Promise<PluginView[]>
+    /** Opens a picker (folder / zip) or clones the URL, and returns a preview — nothing is installed yet. Resolves null if the picker was cancelled. */
+    inspect(source: PluginSource): Promise<PluginPreview | null>
+    install(stagingId: string): Promise<PluginView[]>
+    cancelInstall(stagingId: string): Promise<void>
+    setEnabled(id: string, enabled: boolean): Promise<PluginView[]>
+    remove(id: string): Promise<PluginView[]>
+    setSecret(id: string, name: string, value: string): Promise<PluginView[]>
+    onChange(cb: () => void): () => void
   }
   files: {
     /** Absolute path of a dropped File (Electron removed File.path in sandboxed renderers). */

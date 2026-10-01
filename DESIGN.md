@@ -283,7 +283,7 @@ desktop-agent/
 |---|---|---|
 | ✅ **M1 骨架** | Electron 專案、透明角色視窗（佔位貓咪動畫）、點擊開輸入框、OpenAI 相容 API 串流對話、連線設定（baseURL / Key / 模型） | mac/win 都能看到貓並聊天（雲端或本機 Ollama 皆可） |
 | ✅ **M2 工具** | Tool Registry、權限確認、檔案工具、Shell、Web Search、截圖、拖曳檔案 | 能請貓整理資料夾、分析截圖、上網查資料 |
-| **M3 擴充** | MCP client、Skill loader、Plugin 安裝、宣告式 CLI/HTTP 工具 | 能安裝一個含 knowledge skill + MCP server 的 plugin |
+| ✅ **M3 擴充** | MCP client、Skill loader、Plugin 安裝、宣告式 CLI/HTTP 工具 | 能安裝一個含 knowledge skill + MCP server 的 plugin |
 | **M4 生活感** | 完整狀態動畫、造型包切換、主動提醒、勿擾模式、敏感資料夾強制走本機模型、Claude Provider（選用） | 可換造型、敏感資料不出電腦 |
 | **M5 發佈** | 簽章公證、安裝包、自動更新、操作紀錄檢視、內部 plugin 索引 | 同事可自行下載安裝並自動更新 |
 

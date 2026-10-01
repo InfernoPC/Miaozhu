@@ -4,6 +4,7 @@ import {
   PET_SKINS,
   type HitRect,
   type PermissionDecision,
+  type PluginSource,
   type SavedPlace,
   type SaveProfileInput,
   type SaveSearchInput,
@@ -13,6 +14,7 @@ import type { Agent } from './agent/agent'
 import { cancelOpenRouterConnect, connectOpenRouter } from './auth/openrouter'
 import { createProvider, describeError } from './providers'
 import { auditLogPath } from './permissions/guard'
+import type { PluginManager } from './plugins/manager'
 import type { SettingsStore } from './settings/store'
 import { searchWeb } from './tools/web'
 import type { WindowManager } from './windows'
@@ -43,7 +45,25 @@ async function testConnection(settings: SettingsStore, input: SaveProfileInput):
   }
 }
 
-export function registerIpc(agent: Agent, settings: SettingsStore, windows: WindowManager): void {
+export function registerIpc(agent: Agent, settings: SettingsStore, windows: WindowManager, plugins: PluginManager): void {
+  ipcMain.handle('plugins:list', () => plugins.list())
+  ipcMain.handle('plugins:inspect', async (e, source: PluginSource) => {
+    if (source.kind === 'git') return plugins.inspect(source)
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const options: Electron.OpenDialogOptions =
+      source.kind === 'folder'
+        ? { title: '選擇外掛資料夾', properties: ['openDirectory'] }
+        : { title: '選擇外掛 zip 檔', properties: ['openFile'], filters: [{ name: 'Zip', extensions: ['zip'] }] }
+    const res = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options)
+    if (res.canceled || !res.filePaths[0]) return null
+    return plugins.inspect({ kind: source.kind, path: res.filePaths[0] })
+  })
+  ipcMain.handle('plugins:install', (_e, stagingId: string) => plugins.install(stagingId))
+  ipcMain.handle('plugins:cancelInstall', (_e, stagingId: string) => plugins.cancelInstall(stagingId))
+  ipcMain.handle('plugins:setEnabled', (_e, id: string, enabled: boolean) => plugins.setEnabled(id, enabled))
+  ipcMain.handle('plugins:remove', (_e, id: string) => plugins.remove(id))
+  ipcMain.handle('plugins:setSecret', (_e, id: string, name: string, value: string) => plugins.setSecret(id, name, value))
+
   ipcMain.handle('agent:send', (_e, text: string, attachments?: string[]) => agent.send(text, attachments))
   ipcMain.handle('agent:respondPermission', (_e, id: string, decision: PermissionDecision) => agent.respondPermission(id, decision))
   ipcMain.handle('agent:pendingPermissions', () => agent.pendingPermissions())

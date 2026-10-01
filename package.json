@@ -16,14 +16,18 @@
   },
   "dependencies": {
     "@fontsource/huninn": "^5.3.0",
+    "@modelcontextprotocol/sdk": "^1.31.0",
+    "cross-spawn": "^7.0.6",
     "openai": "^7.23.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
-    "unpdf": "^1.8.1"
+    "unpdf": "^1.8.1",
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
+    "@types/cross-spawn": "^6.0.6",
     "@types/node": "^26.6.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -33,6 +37,7 @@
     "electron-vite": "^5.0.0",
     "typescript": "^7.0.2",
     "vite": "^7.3.6",
-    "vitest": "^5.0.2"
+    "vitest": "^5.0.2",
+    "zod": "^4.6.5"
   }
 }

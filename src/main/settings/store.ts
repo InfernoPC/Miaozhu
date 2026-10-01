@@ -147,6 +147,17 @@ export class SettingsStore {
     return this.view()
   }
 
+  /** Encrypted key/value storage for plugin secrets, shared with API keys. */
+  vault(): { get(key: string): string | undefined; set(key: string, value: string): void } {
+    return {
+      get: (key) => this.getApiKey(key),
+      set: (key, value) => {
+        this.storeSecret(key, value)
+        this.persist()
+      }
+    }
+  }
+
   /** undefined = keep, '' = remove, otherwise encrypt and replace. */
   private storeSecret(id: string, value: string | undefined): void {
     if (value === '') delete this.secrets[id]

@@ -1,0 +1,17 @@
+# 宣告式 HTTP 工具：不用寫程式，喵助就能呼叫這個 API。
+# {base} 會換成模型給的參數；需要金鑰的 API 可以在 headers 用 ${secret:名稱}，
+# 使用者在「設定 → 外掛」填入後會加密保存。
+name: exchange_rates
+type: http
+description: 查詢最新匯率。回傳以 base 為基準、對所有幣別的匯率（每天更新一次）。
+risk: network
+input_schema:
+  type: object
+  properties:
+    base:
+      type: string
+      description: 基準幣別的 ISO 代碼，例如 USD、TWD、JPY
+  required: [base]
+request:
+  method: GET
+  url: https://open.er-api.com/v6/latest/{base}

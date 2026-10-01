@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { isOpenRouterURL, MAX_FALLBACK_MODELS, type ProviderProfile, type SaveProfileInput, type SettingsView, type TestResult } from '@shared/types'
 import { FoldersTab } from './FoldersTab'
 import { PersonaTab } from './PersonaTab'
+import { PluginsTab } from './PluginsTab'
 import { SearchTab } from './SearchTab'
 import './settings.css'
 
@@ -438,7 +439,8 @@ const TABS = [
   { id: 'profiles', label: '模型連線', View: ProfilesTab },
   { id: 'persona', label: '角色', View: PersonaTab },
   { id: 'folders', label: '檔案權限', View: FoldersTab },
-  { id: 'search', label: '網路搜尋', View: SearchTab }
+  { id: 'search', label: '網路搜尋', View: SearchTab },
+  { id: 'plugins', label: '外掛', View: PluginsTab }
 ] as const
 
 export function Settings() {

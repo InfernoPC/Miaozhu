@@ -6,7 +6,7 @@ A cross-platform desktop AI assistant that lives on your screen as a line-art ca
 
 It connects to any OpenAI-compatible API, can use tools on your computer (files, shell, web, screenshots), and asks before doing anything that changes things.
 
-> Status: early development (milestones M1 and M2 of [DESIGN.md](DESIGN.md) are done). The UI is in Traditional Chinese. macOS is tested; Windows is not yet.
+> Status: early development (milestones M1–M3 of [DESIGN.md](DESIGN.md) are done). The UI is in Traditional Chinese. macOS is tested; Windows is not yet.
 
 ## Features
 
@@ -35,6 +35,13 @@ It connects to any OpenAI-compatible API, can use tools on your computer (files,
 | Find places on Google Maps | Ratings, review counts, addresses and map links (needs the Serper key) | No |
 | Plan a route | Opens Google Maps directions in your browser; no key needed | No |
 | Screenshot | macOS asks for Screen Recording permission once | Every time |
+
+**Plugins** (Settings → 外掛)
+- Compatible with Claude Code plugins: `SKILL.md` skills, MCP servers (`.mcp.json`, stdio or HTTP), plus tools declared in YAML (HTTP or CLI) with no code.
+- Install from a folder, a zip file or a Git URL. Before anything runs you see every skill, the exact MCP command lines and each tool's risk level.
+- Skills are listed to the model by name and description only and loaded when needed. MCP tool calls ask first.
+- Secrets for declared tools are stored encrypted and scrubbed from output. CLI tools run without a shell, so arguments can't inject commands.
+- See [`plugins/examples`](plugins/examples) for a working example and the YAML reference.
 
 **Safety**
 - Credential and browser-data locations (`~/.ssh`, `~/.aws`, Keychain, browser profiles…) are always blocked, even if you approve. Paths are symlink-resolved before checking, so links can't be used to get around this.
@@ -102,6 +109,7 @@ src/
 │   ├── providers/        # OpenAI-compatible provider, fallback models
 │   ├── tools/            # Built-in tools: files, shell, web, screenshot
 │   ├── permissions/      # Permission checks, blocked paths, audit log
+│   ├── plugins/          # Plugin install/review, skills, MCP client, YAML tools
 │   ├── auth/             # OpenRouter OAuth sign-in
 │   ├── settings/         # Connection settings and encrypted keys
 │   ├── windows/          # Pet, chat and settings windows
@@ -119,7 +127,6 @@ tests/                    # Vitest: permissions, tools, agent loop, providers, s
 
 See [DESIGN.md](DESIGN.md) (Traditional Chinese). Next up:
 
-- **M3**: plugins compatible with the Claude ecosystem (MCP servers and `SKILL.md` skills), and tools declared in YAML
 - **M4**: reminders, conversation history list, swappable animated skins, local-only mode for sensitive folders
 - **M5**: signed installers, auto-update, audit log viewer
 

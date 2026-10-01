@@ -3,6 +3,8 @@ import type { AgentEvent } from '@shared/types'
 import { Agent } from './agent/agent'
 import { ConversationStore } from './agent/conversation-store'
 import { registerIpc } from './ipc'
+import { PluginManager } from './plugins/manager'
+import { adoptLoginShellPath } from './util/shell-path'
 import { SettingsStore } from './settings/store'
 import { WindowManager } from './windows'
 
@@ -13,13 +15,24 @@ const windows = new WindowManager()
 
 app.on('second-instance', () => windows.openChat())
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await adoptLoginShellPath()
   const settings = new SettingsStore()
   const broadcast = (e: AgentEvent) => {
     for (const win of windows.all()) if (!win.isDestroyed()) win.webContents.send('agent:event', e)
   }
-  const agent = new Agent(settings, broadcast, { hidePet: () => windows.hidePet(), store: new ConversationStore() })
-  registerIpc(agent, settings, windows)
+  // Settings windows refresh their plugin list when an MCP server starts, fails or stops.
+  const plugins = new PluginManager(settings.vault(), () => {
+    for (const win of windows.all()) if (!win.isDestroyed()) win.webContents.send('plugins:changed')
+  })
+  const agent = new Agent(settings, broadcast, {
+    hidePet: () => windows.hidePet(),
+    store: new ConversationStore(),
+    plugins
+  })
+  registerIpc(agent, settings, windows, plugins)
+  void plugins.start()
+  app.on('before-quit', () => void plugins.stopAll())
 
   windows.createPet()
   // First run: nothing configured yet, so guide the user straight to settings.

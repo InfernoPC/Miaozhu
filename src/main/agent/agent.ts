@@ -17,7 +17,7 @@ import { createProvider, describeError } from '../providers'
 import { errorStatus } from '../providers/errors'
 import type { LLMMessage, ToolCall, UserContent } from '../providers/types'
 import { isImagePath, readForModel } from '../tools/fs'
-import { findTool, parseArgs, TOOLS, ToolError } from '../tools'
+import { parseArgs, TOOLS, ToolError, type ToolDef } from '../tools'
 import { displayPath, expandPath, realPath } from '../tools/paths'
 import type { ConversationStore } from './conversation-store'
 import { buildSystemPrompt } from './prompt'
@@ -34,8 +34,16 @@ export interface AgentSettings {
   places(): SavedPlace[]
 }
 
+/** Tools and skills contributed by installed plugins (M3). */
+export interface PluginSource {
+  /** `taken` holds built-in names; plugins must not shadow them. */
+  tools(taken: Set<string>): ToolDef[]
+  skills(): { name: string; description: string }[]
+}
+
 export interface AgentDeps {
   hidePet(): Promise<() => void>
+  plugins?: PluginSource
   /** Where the conversation is saved between launches; omitted in tests that don't care. */
   store?: ConversationStore
 }
@@ -154,10 +162,11 @@ export class Agent {
         let text = ''
         let calls: ToolCall[] = []
         const useTools = !this.noTools.has(toolKey)
+        const tools = this.availableTools()
         try {
           for await (const ev of provider.stream({
             messages: this.buildContext(),
-            tools: useTools ? TOOLS.map((t) => t.spec) : undefined,
+            tools: useTools ? tools.map((t) => t.spec) : undefined,
             signal: controller.signal
           })) {
             if (ev.type === 'model') assistant.model = ev.model
@@ -185,7 +194,7 @@ export class Agent {
             turn.push({ role: 'tool', toolCallId: call.id, text: '使用者已取消' })
             continue
           }
-          const result = await this.runTool(call, assistant, controller.signal)
+          const result = await this.runTool(call, tools, assistant, controller.signal)
           turn.push({ role: 'tool', toolCallId: call.id, text: result.text })
           images.push(...(result.images ?? []))
         }
@@ -231,12 +240,18 @@ export class Agent {
     this.broadcast({ type: 'tool', assistantId: assistant.id, tool: { ...view } })
   }
 
-  private async runTool(call: ToolCall, assistant: ChatMessage, signal: AbortSignal): Promise<{ text: string; images?: string[] }> {
-    const tool = findTool(call.name)
+  /** Built-ins first, then whatever enabled plugins offer right now. */
+  private availableTools(): ToolDef[] {
+    const plugin = this.deps.plugins?.tools(new Set(TOOLS.map((t) => t.spec.name))) ?? []
+    return [...TOOLS, ...plugin]
+  }
+
+  private async runTool(call: ToolCall, tools: ToolDef[], assistant: ChatMessage, signal: AbortSignal): Promise<{ text: string; images?: string[] }> {
+    const tool = tools.find((t) => t.spec.name === call.name)
     const view: ToolCallView = { id: call.id, name: call.name, title: call.name, status: 'running' }
     if (!tool) {
       this.updateTool(assistant, { ...view, status: 'error', summary: '未知的工具' })
-      return { text: `錯誤：沒有名為 ${call.name} 的工具。可用工具：${TOOLS.map((t) => t.spec.name).join(', ')}` }
+      return { text: `錯誤：沒有名為 ${call.name} 的工具。可用工具：${tools.map((t) => t.spec.name).join(', ')}` }
     }
 
     let input: Record<string, unknown>
@@ -333,6 +348,6 @@ export class Agent {
               : m
           )
     )
-    return [{ role: 'system', text: buildSystemPrompt(this.settings.persona(), this.settings.places()) }, ...flattened]
+    return [{ role: 'system', text: buildSystemPrompt(this.settings.persona(), this.settings.places(), this.deps.plugins?.skills() ?? []) }, ...flattened]
   }
 }

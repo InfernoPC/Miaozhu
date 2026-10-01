@@ -33,6 +33,20 @@ const api: DesktopApi = {
     savePersona: (text) => ipcRenderer.invoke('settings:savePersona', text),
     savePlaces: (places) => ipcRenderer.invoke('settings:savePlaces', places)
   },
+  plugins: {
+    list: () => ipcRenderer.invoke('plugins:list'),
+    inspect: (source) => ipcRenderer.invoke('plugins:inspect', source),
+    install: (stagingId) => ipcRenderer.invoke('plugins:install', stagingId),
+    cancelInstall: (stagingId) => ipcRenderer.invoke('plugins:cancelInstall', stagingId),
+    setEnabled: (id, enabled) => ipcRenderer.invoke('plugins:setEnabled', id, enabled),
+    remove: (id) => ipcRenderer.invoke('plugins:remove', id),
+    setSecret: (id, name, value) => ipcRenderer.invoke('plugins:setSecret', id, name, value),
+    onChange: (cb) => {
+      const listener = () => cb()
+      ipcRenderer.on('plugins:changed', listener)
+      return () => ipcRenderer.removeListener('plugins:changed', listener)
+    }
+  },
   files: {
     pathOf: (file) => webUtils.getPathForFile(file)
   },

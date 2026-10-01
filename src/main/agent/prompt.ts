@@ -49,6 +49,17 @@ export function normalizePersona(persona: string | undefined): string {
   return trimmed ? trimmed.slice(0, MAX_PERSONA_CHARS) : DEFAULT_PERSONA
 }
 
-export function buildSystemPrompt(persona: string | undefined, places: SavedPlace[] = []): string {
-  return `${normalizePersona(persona)}\n\n${fixedRules()}\n\n${environment(places)}`
+/** Installed skills by name and description only; the model loads one with load_skill when needed. */
+function skillsSection(skills: { name: string; description: string }[]): string {
+  if (!skills.length) return ''
+  const list = skills.map((s) => `- ${s.name}：${s.description || '（沒有說明）'}`).join('\n')
+  return `\n\n已安裝的技能（使用者的需求符合時，先用 load_skill 讀取該技能的完整說明，再照著做）：\n${list}`
+}
+
+export function buildSystemPrompt(
+  persona: string | undefined,
+  places: SavedPlace[] = [],
+  skills: { name: string; description: string }[] = []
+): string {
+  return `${normalizePersona(persona)}\n\n${fixedRules()}${skillsSection(skills)}\n\n${environment(places)}`
 }
