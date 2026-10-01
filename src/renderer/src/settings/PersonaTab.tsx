@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { SettingsView, TestResult } from '@shared/types'
+import { AppearanceSection } from './AppearanceSection'
 
 /** Starting points people can apply and then edit. */
 const EXAMPLES = [
@@ -46,6 +47,8 @@ export function PersonaTab() {
 
   return (
     <div className="settings-page">
+      <AppearanceSection />
+
       <section>
         <h2>角色設定</h2>
         <p className="hint">決定喵助是誰、怎麼說話：名字、個性、口頭禪、回答長短。下一則訊息開始生效。</p>

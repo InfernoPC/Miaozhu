@@ -118,3 +118,5 @@
 .bubble-reminder .reminder-text { margin: 2px 0 0; font-family: var(--font-voice); font-size: 18px; line-height: 1.4; }
 .bubble-reminder .reminder-when { margin: 2px 0 0; font-size: 12px; color: var(--graphite); }
 .bubble-reminder .bubble-actions { justify-content: flex-start; gap: 6px; margin-top: 8px; }
+
+.skin-pack { display: block; object-fit: contain; pointer-events: none; }

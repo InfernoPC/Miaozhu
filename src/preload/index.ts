@@ -72,6 +72,13 @@ const api: DesktopApi = {
     setDnd: (minutes) => ipcRenderer.invoke('reminders:setDnd', minutes),
     setQuietHours: (start, end) => ipcRenderer.invoke('reminders:setQuietHours', start, end)
   },
+  skins: {
+    list: () => ipcRenderer.invoke('skins:list'),
+    load: (id) => ipcRenderer.invoke('skins:load', id),
+    install: (from) => ipcRenderer.invoke('skins:install', from),
+    remove: (id) => ipcRenderer.invoke('skins:remove', id),
+    select: (id) => ipcRenderer.invoke('skins:select', id)
+  },
   marketplaces: {
     list: () => ipcRenderer.invoke('marketplaces:list'),
     add: (input) => ipcRenderer.invoke('marketplaces:add', input),

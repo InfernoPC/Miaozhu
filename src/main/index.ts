@@ -6,6 +6,7 @@ import { registerIpc } from './ipc'
 import { PluginManager } from './plugins/manager'
 import { MarketplaceManager } from './plugins/marketplaces'
 import { ReminderService } from './reminders/service'
+import { SkinPackManager } from './skins/skin-packs'
 import { reminderTools } from './tools/reminders'
 import { adoptLoginShellPath } from './util/shell-path'
 import { SettingsStore } from './settings/store'
@@ -47,7 +48,7 @@ app.whenReady().then(async () => {
     plugins,
     extraTools: reminderTools(reminders)
   })
-  registerIpc(agent, settings, windows, plugins, marketplaces, reminders, conversations)
+  registerIpc(agent, settings, windows, plugins, marketplaces, reminders, conversations, new SkinPackManager())
   reminders.start()
   void plugins.start()
   app.on('before-quit', () => {

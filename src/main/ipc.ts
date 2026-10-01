@@ -1,7 +1,6 @@
 import { BrowserWindow, Menu, app, dialog, ipcMain, shell } from 'electron'
 import { existsSync, writeFileSync } from 'node:fs'
 import {
-  PET_SKINS,
   type HitRect,
   type PermissionDecision,
   type PluginSource,
@@ -18,6 +17,7 @@ import type { PluginManager } from './plugins/manager'
 import type { MarketplaceManager } from './plugins/marketplaces'
 import type { ReminderService } from './reminders/service'
 import type { ConversationStore } from './agent/conversation-store'
+import type { SkinPackManager } from './skins/skin-packs'
 import type { SettingsStore } from './settings/store'
 import { searchWeb } from './tools/web'
 import type { WindowManager } from './windows'
@@ -78,8 +78,33 @@ export function registerIpc(
   plugins: PluginManager,
   marketplaces: MarketplaceManager,
   reminders: ReminderService,
-  conversations: ConversationStore
+  conversations: ConversationStore,
+  skins: SkinPackManager
 ): void {
+  const selectSkin = (id: string) => {
+    settings.setPetSkin(id)
+    windows.pet?.webContents.send('pet:skin', id)
+  }
+  ipcMain.handle('skins:list', () => skins.list())
+  ipcMain.handle('skins:load', (_e, id: string) => skins.load(id))
+  ipcMain.handle('skins:install', async (e, from: 'folder' | 'zip') => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const options: Electron.OpenDialogOptions =
+      from === 'folder'
+        ? { title: '選擇造型資料夾（裡面要有 skin.json）', properties: ['openDirectory'] }
+        : { title: '選擇造型 zip 檔', properties: ['openFile'], filters: [{ name: 'Zip', extensions: ['zip'] }] }
+    const res = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options)
+    if (res.canceled || !res.filePaths[0]) return null
+    selectSkin(await skins.install({ kind: from, path: res.filePaths[0] }))
+    return skins.list()
+  })
+  ipcMain.handle('skins:remove', (_e, id: string) => {
+    skins.remove(id)
+    if (settings.view().petSkin === id) selectSkin('desk')
+    return skins.list()
+  })
+  ipcMain.handle('skins:select', (_e, id: string) => selectSkin(id))
+
   ipcMain.handle('conversations:list', () => conversations.list())
   ipcMain.handle('conversations:current', () => agent.currentConversation())
   ipcMain.handle('conversations:open', (_e, id: string) => agent.openConversation(id))
@@ -226,15 +251,16 @@ export function registerIpc(
       },
       {
         label: '切換造型',
-        submenu: PET_SKINS.map((s) => ({
-          label: s.label,
-          type: 'radio' as const,
-          checked: s.id === view.petSkin,
-          click: () => {
-            settings.setPetSkin(s.id)
-            windows.pet?.webContents.send('pet:skin', s.id)
-          }
-        }))
+        submenu: [
+          ...skins.list().map((s) => ({
+            label: s.name,
+            type: 'radio' as const,
+            checked: s.id === view.petSkin,
+            click: () => selectSkin(s.id)
+          })),
+          { type: 'separator' as const },
+          { label: '管理造型…', click: () => windows.openSettings() }
+        ]
       },
       dndMenu(reminders),
       { label: '新對話', click: () => agent.newConversation() },

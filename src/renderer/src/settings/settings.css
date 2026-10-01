@@ -181,3 +181,6 @@ pre.mcp-error { margin: 2px 0 0; font: 11.5px/1.5 var(--font-code); white-space:
 .reminder-row strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .quiet-row { align-items: center; }
 .quiet-row input[type='time'] { width: 8.5em; }
+
+.skin-row { gap: 10px; cursor: pointer; }
+.skin-row input { width: auto; accent-color: var(--ink); }

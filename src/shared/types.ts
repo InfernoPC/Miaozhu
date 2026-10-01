@@ -26,12 +26,34 @@ export interface ProfileView extends ProviderProfile {
   hasKey: boolean
 }
 
-export type PetSkinId = 'desk' | 'classic'
+/** A built-in skin id ('desk', 'classic') or an installed skin pack's id. */
+export type PetSkinId = string
 
 export const PET_SKINS: { id: PetSkinId; label: string }[] = [
   { id: 'desk', label: '拍桌貓' },
   { id: 'classic', label: '橘貓' }
 ]
+
+export const PET_STATES: PetState[] = ['idle', 'listening', 'thinking', 'talking', 'working', 'alert', 'sleeping', 'error']
+
+export interface SkinView {
+  id: PetSkinId
+  name: string
+  author?: string
+  builtin: boolean
+  renderer?: 'lottie' | 'images'
+  /** Which states the pack draws itself (the rest fall back to idle). */
+  states?: PetState[]
+}
+
+/** A skin pack ready to draw: every file already read into memory (no file access from the UI). */
+export interface LoadedSkin {
+  id: PetSkinId
+  renderer: 'lottie' | 'images'
+  width: number
+  height: number
+  states: Partial<Record<PetState, { kind: 'image'; src: string } | { kind: 'lottie'; data: unknown }>>
+}
 
 export type SearchProvider = 'none' | 'serper' | 'tavily' | 'brave' | 'searxng'
 
@@ -351,6 +373,14 @@ export interface DesktopApi {
     /** minutes = null turns manual do-not-disturb off. */
     setDnd(minutes: number | null): Promise<DndView>
     setQuietHours(start: string | null, end: string | null): Promise<DndView>
+  }
+  skins: {
+    list(): Promise<SkinView[]>
+    load(id: PetSkinId): Promise<LoadedSkin | null>
+    /** Opens a folder (or zip) picker and installs the skin pack inside. Resolves null if cancelled. */
+    install(from: 'folder' | 'zip'): Promise<SkinView[] | null>
+    remove(id: PetSkinId): Promise<SkinView[]>
+    select(id: PetSkinId): Promise<void>
   }
   marketplaces: {
     list(): Promise<MarketplaceView[]>

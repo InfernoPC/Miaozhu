@@ -1,0 +1,17 @@
+{
+  "name": "夜貓",
+  "author": "Miaozhu 範例",
+  "renderer": "images",
+  "width": 200,
+  "height": 180,
+  "states": {
+    "idle": "idle.svg",
+    "listening": "idle.svg",
+    "thinking": "thinking.svg",
+    "talking": "talking.svg",
+    "working": "thinking.svg",
+    "alert": "idle.svg",
+    "sleeping": "sleeping.svg",
+    "error": "error.svg"
+  }
+}

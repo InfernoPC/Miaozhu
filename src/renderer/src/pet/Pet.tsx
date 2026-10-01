@@ -1,10 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { AttachmentView, DueReminder, PermissionRequest, PetSkinId, PetState } from '@shared/types'
+import type { AttachmentView, DueReminder, LoadedSkin, PermissionRequest, PetSkinId, PetState } from '@shared/types'
 import { AttachmentChips, droppedPaths } from '../common/AttachmentChips'
 import { Icon } from '../common/Icon'
 import { Markdown } from '../common/Markdown'
 import { PermissionPrompt } from '../common/PermissionPrompt'
 import { SKINS } from './renderer'
+import { SkinPack } from './SkinPack'
 import './pet.css'
 
 const SLEEP_AFTER_MS = 5 * 60_000
@@ -29,6 +30,7 @@ const bubbleDuration = (text: string) => Math.min(30_000, 6_000 + text.length * 
 export function Pet() {
   const [state, setState] = useState<PetState>('idle')
   const [skin, setSkin] = useState<PetSkinId>('desk')
+  const [pack, setPack] = useState<LoadedSkin | null>(null)
   const [bubble, setBubble] = useState<Bubble | null>(null)
   const [toolStatus, setToolStatus] = useState<string | null>(null)
   const [permissions, setPermissions] = useState<PermissionRequest[]>([])
@@ -57,6 +59,16 @@ export function Pet() {
       if (!busyRef.current) setState('sleeping')
     }, SLEEP_AFTER_MS)
   }
+
+  // An installed skin pack is read by main and handed over as data.
+  useEffect(() => {
+    if (skin in SKINS) return setPack(null)
+    let live = true
+    void window.api.skins.load(skin).then((p) => live && setPack(p))
+    return () => {
+      live = false
+    }
+  }, [skin])
 
   // Due reminders queue up; the cat jumps until each one is answered.
   useEffect(
@@ -237,6 +249,7 @@ export function Pet() {
   }
 
   const Character = SKINS[skin] ?? SKINS.desk
+  const character = pack ? <SkinPack skin={pack} state={state} /> : <Character state={state} />
   const permission = permissions[0]
   const reminder = due[0]
   const quick = attachments.length ? QUICK_ACTIONS[attachments[0].kind] : []
@@ -341,7 +354,7 @@ export function Pet() {
         }}
         {...dropProps}
       >
-        <Character state={state} />
+        {character}
       </div>
     </div>
   )
