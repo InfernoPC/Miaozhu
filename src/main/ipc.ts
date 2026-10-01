@@ -15,6 +15,7 @@ import { cancelOpenRouterConnect, connectOpenRouter } from './auth/openrouter'
 import { createProvider, describeError } from './providers'
 import { auditLogPath } from './permissions/guard'
 import type { PluginManager } from './plugins/manager'
+import type { MarketplaceManager } from './plugins/marketplaces'
 import type { SettingsStore } from './settings/store'
 import { searchWeb } from './tools/web'
 import type { WindowManager } from './windows'
@@ -45,10 +46,21 @@ async function testConnection(settings: SettingsStore, input: SaveProfileInput):
   }
 }
 
-export function registerIpc(agent: Agent, settings: SettingsStore, windows: WindowManager, plugins: PluginManager): void {
+export function registerIpc(
+  agent: Agent,
+  settings: SettingsStore,
+  windows: WindowManager,
+  plugins: PluginManager,
+  marketplaces: MarketplaceManager
+): void {
   ipcMain.handle('plugins:list', () => plugins.list())
   ipcMain.handle('plugins:inspect', async (e, source: PluginSource) => {
     if (source.kind === 'git') return plugins.inspect(source)
+    if (source.kind === 'marketplace') {
+      const { entry, fetch } = await marketplaces.resolve(source.marketplace, source.entry)
+      const sha = entry.source.kind === 'git' ? entry.source.sha : undefined
+      return plugins.inspect({ kind: 'entry', fetch, origin: { marketplace: source.marketplace, entry: entry.name, version: entry.version, sha } })
+    }
     const win = BrowserWindow.fromWebContents(e.sender)
     const options: Electron.OpenDialogOptions =
       source.kind === 'folder'
@@ -62,6 +74,26 @@ export function registerIpc(agent: Agent, settings: SettingsStore, windows: Wind
   ipcMain.handle('plugins:cancelInstall', (_e, stagingId: string) => plugins.cancelInstall(stagingId))
   ipcMain.handle('plugins:setEnabled', (_e, id: string, enabled: boolean) => plugins.setEnabled(id, enabled))
   ipcMain.handle('plugins:remove', (_e, id: string) => plugins.remove(id))
+  ipcMain.handle('marketplaces:list', async () => {
+    // First look at the list: fetch catalogs that haven't been loaded yet, in the background.
+    void marketplaces.loadMissing()
+    return marketplaces.list(plugins.list())
+  })
+  ipcMain.handle('marketplaces:add', async (_e, input: string) => {
+    await marketplaces.add(input)
+    return marketplaces.list(plugins.list())
+  })
+  ipcMain.handle('marketplaces:remove', async (_e, name: string, uninstallPlugins: boolean) => {
+    if (uninstallPlugins) {
+      for (const p of plugins.list().filter((x) => x.origin?.marketplace === name)) await plugins.remove(p.id)
+    }
+    marketplaces.remove(name)
+    return marketplaces.list(plugins.list())
+  })
+  ipcMain.handle('marketplaces:refresh', async (_e, name: string) => {
+    await marketplaces.refresh(name)
+    return marketplaces.list(plugins.list())
+  })
   ipcMain.handle('plugins:setSecret', (_e, id: string, name: string, value: string) => plugins.setSecret(id, name, value))
 
   ipcMain.handle('agent:send', (_e, text: string, attachments?: string[]) => agent.send(text, attachments))

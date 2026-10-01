@@ -4,6 +4,7 @@ import { Agent } from './agent/agent'
 import { ConversationStore } from './agent/conversation-store'
 import { registerIpc } from './ipc'
 import { PluginManager } from './plugins/manager'
+import { MarketplaceManager } from './plugins/marketplaces'
 import { adoptLoginShellPath } from './util/shell-path'
 import { SettingsStore } from './settings/store'
 import { WindowManager } from './windows'
@@ -22,15 +23,17 @@ app.whenReady().then(async () => {
     for (const win of windows.all()) if (!win.isDestroyed()) win.webContents.send('agent:event', e)
   }
   // Settings windows refresh their plugin list when an MCP server starts, fails or stops.
-  const plugins = new PluginManager(settings.vault(), () => {
+  const notifyPlugins = () => {
     for (const win of windows.all()) if (!win.isDestroyed()) win.webContents.send('plugins:changed')
-  })
+  }
+  const plugins = new PluginManager(settings.vault(), notifyPlugins)
+  const marketplaces = new MarketplaceManager({}, notifyPlugins)
   const agent = new Agent(settings, broadcast, {
     hidePet: () => windows.hidePet(),
     store: new ConversationStore(),
     plugins
   })
-  registerIpc(agent, settings, windows, plugins)
+  registerIpc(agent, settings, windows, plugins, marketplaces)
   void plugins.start()
   app.on('before-quit', () => void plugins.stopAll())
 

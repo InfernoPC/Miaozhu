@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { PluginMcpView, PluginPreview, PluginSource, PluginView, ToolRisk } from '@shared/types'
 import { Icon } from '../common/Icon'
+import { MarketplaceBrowser } from './MarketplaceBrowser'
 
 const RISK_LABEL: Record<ToolRisk, string> = {
   read: '讀取',
@@ -127,6 +128,7 @@ export function PluginsTab() {
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState<string | null>(null)
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
+  const [view, setView] = useState<'installed' | 'browse'>('installed')
 
   useEffect(() => {
     const refresh = () => void window.api.plugins.list().then(setPlugins)
@@ -164,6 +166,16 @@ export function PluginsTab() {
 
   return (
     <div className="settings-page">
+      <div className="subtabs" role="tablist">
+        <button role="tab" aria-selected={view === 'installed'} className={view === 'installed' ? 'active' : ''} onClick={() => setView('installed')}>
+          已安裝{plugins.length ? ` ${plugins.length}` : ''}
+        </button>
+        <button role="tab" aria-selected={view === 'browse'} className={view === 'browse' ? 'active' : ''} onClick={() => setView('browse')}>
+          探索市集
+        </button>
+      </div>
+
+      {view === 'installed' && (
       <section>
         <h2>外掛</h2>
         <p className="hint">
@@ -191,9 +203,11 @@ export function PluginsTab() {
             讀取
           </button>
         </form>
-        {busy && <p className="hint">{busy}</p>}
-        {error && <p className="status err">{error}</p>}
       </section>
+      )}
+
+      {busy && <p className="hint">{busy}</p>}
+      {error && <p className="status err">{error}</p>}
 
       {preview && (
         <section className="plugin-review" aria-label="安裝前確認">
@@ -224,6 +238,9 @@ export function PluginsTab() {
         </section>
       )}
 
+      {view === 'browse' && <MarketplaceBrowser busy={!!busy} onInspect={(source, label) => void inspect(source, label)} />}
+
+      {view === 'installed' && (
       <section>
         <h2>已安裝</h2>
         {plugins.length === 0 && <p className="hint">還沒有安裝任何外掛。</p>}
@@ -257,6 +274,11 @@ export function PluginsTab() {
                 {open === p.id && (
                   <div className="plugin-body">
                     {p.description && <p className="hint">{p.description}</p>}
+                    {p.origin && (
+                      <p className="hint">
+                        來自 marketplace「{p.origin.marketplace}」{p.origin.version ? `，版本 ${p.origin.version}` : ''}
+                      </p>
+                    )}
                     <PluginContents p={p} />
                     <SecretFields p={p} onSaved={setPlugins} />
                     <div className="actions">
@@ -289,6 +311,7 @@ export function PluginsTab() {
           })}
         </ul>
       </section>
+      )}
     </div>
   )
 }

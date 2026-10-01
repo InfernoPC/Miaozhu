@@ -47,6 +47,12 @@ const api: DesktopApi = {
       return () => ipcRenderer.removeListener('plugins:changed', listener)
     }
   },
+  marketplaces: {
+    list: () => ipcRenderer.invoke('marketplaces:list'),
+    add: (input) => ipcRenderer.invoke('marketplaces:add', input),
+    remove: (name, uninstallPlugins) => ipcRenderer.invoke('marketplaces:remove', name, uninstallPlugins),
+    refresh: (name) => ipcRenderer.invoke('marketplaces:refresh', name)
+  },
   files: {
     pathOf: (file) => webUtils.getPathForFile(file)
   },

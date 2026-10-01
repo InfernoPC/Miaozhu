@@ -1,11 +1,12 @@
-import spawn from 'cross-spawn'
 import { app } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { cpSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import type { PluginPreview, PluginView } from '@shared/types'
 import type { ToolDef } from '../tools/types'
+import { isInside } from '../tools/paths'
 import { readJson, writeJson } from '../util/json-file'
+import { run } from '../util/run'
 import { declaredTool } from './declared-tools'
 import { looksLikePlugin, readPlugin, type LoadedPlugin } from './manifest'
 import { describeTarget, McpConnection } from './mcp'
@@ -17,8 +18,12 @@ export interface SecretVault {
   set(key: string, value: string): void
 }
 
+export type PluginOrigin = NonNullable<PluginView['origin']>
+
 interface StateFile {
   enabled: Record<string, boolean>
+  /** Which marketplace entry each plugin came from, for updates. */
+  origins?: Record<string, PluginOrigin>
 }
 
 const pluginsDir = () => join(app.getPath('userData'), 'plugins')
@@ -30,23 +35,6 @@ const secretKey = (id: string, name: string) => `plugin:${id}:${name}`
 export function pluginId(name: string): string {
   const id = name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '')
   return id || `plugin-${Date.now()}`
-}
-
-function run(bin: string, args: string[], cwd: string, timeoutMs: number): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(bin, args, { cwd, windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] })
-    let err = ''
-    child.stderr?.on('data', (b: Buffer) => (err = (err + b.toString()).slice(-800)))
-    const timer = setTimeout(() => child.kill('SIGKILL'), timeoutMs)
-    child.on('error', (e) => {
-      clearTimeout(timer)
-      reject(new Error(`無法執行 ${bin}：${e.message}`))
-    })
-    child.on('close', (code) => {
-      clearTimeout(timer)
-      code === 0 ? resolve() : reject(new Error(err.trim() || `${bin} 結束代碼 ${code}`))
-    })
-  })
 }
 
 /** The plugin root inside an unpacked archive or repo: the folder itself or one level down. */
@@ -61,7 +49,7 @@ function findPluginRoot(dir: string): string | null {
 export class PluginManager {
   private plugins: LoadedPlugin[] = []
   private connections = new Map<string, McpConnection[]>()
-  private staged = new Map<string, { dir: string; root: string; plugin: LoadedPlugin }>()
+  private staged = new Map<string, { dir: string; root: string; plugin: LoadedPlugin; origin?: PluginOrigin }>()
   private state: StateFile = readJson<StateFile>(statePath(), { enabled: {} })
 
   constructor(
@@ -151,7 +139,8 @@ export class PluginManager {
         target: t.kind === 'http' ? `${t.request!.method} ${t.request!.url}` : t.command!.join(' ')
       })),
       secrets: p.secretNames.map((name) => ({ name, isSet: !!this.vault.get(secretKey(p.id, name)) })),
-      warnings: p.warnings
+      warnings: p.warnings,
+      origin: this.state.origins?.[p.id]
     }
   }
 
@@ -166,12 +155,21 @@ export class PluginManager {
    * review exactly what it adds (skills, MCP commands, tools and their risk) before anything
    * is installed or run.
    */
-  async inspect(source: { kind: 'folder' | 'zip'; path: string } | { kind: 'git'; url: string }): Promise<PluginPreview> {
+  async inspect(
+    source:
+      | { kind: 'folder' | 'zip'; path: string }
+      | { kind: 'git'; url: string }
+      /** A marketplace entry: `fetch` downloads it into the given folder and returns the plugin root. */
+      | { kind: 'entry'; fetch: (dest: string) => Promise<string>; origin: PluginOrigin }
+  ): Promise<PluginPreview> {
     const stagingId = randomUUID()
     const dir = join(stagingDir(), stagingId)
     mkdirSync(dir, { recursive: true })
     try {
-      if (source.kind === 'git') {
+      let fetchedRoot: string | null = null
+      if (source.kind === 'entry') {
+        fetchedRoot = await source.fetch(dir)
+      } else if (source.kind === 'git') {
         if (!/^(https:\/\/|git@)[^\s]+$/.test(source.url)) throw new Error('請輸入 https:// 或 git@ 開頭的 Git 網址')
         await run('git', ['clone', '--depth', '1', '--', source.url, join(dir, 'repo')], dir, 120_000)
       } else if (source.kind === 'folder') {
@@ -180,10 +178,12 @@ export class PluginManager {
         // bsdtar reads zip files on macOS and on Windows 10+; no extra dependency.
         await run('tar', ['-xf', source.path, '-C', dir], dir, 60_000)
       }
-      const root = findPluginRoot(dir)
+      const root = fetchedRoot ? (findPluginRoot(fetchedRoot) ?? fetchedRoot) : findPluginRoot(dir)
       if (!root) throw new Error('裡面找不到外掛（需要 .claude-plugin/plugin.json、skills/、.mcp.json 或 tools/）')
-      const plugin = readPlugin(root, pluginId(readPlugin(root).name))
-      this.staged.set(stagingId, { dir, root, plugin })
+      // Marketplace installs are known by the entry name, as in Claude Code.
+      const origin = source.kind === 'entry' ? source.origin : undefined
+      const plugin = readPlugin(root, pluginId(origin?.entry ?? readPlugin(root).name))
+      this.staged.set(stagingId, { dir, root, plugin, origin })
       const existing = this.plugins.find((p) => p.id === plugin.id)
       return { stagingId, plugin: this.toView(plugin, true, false), replaces: existing ? existing.name : undefined }
     } catch (e) {
@@ -206,14 +206,20 @@ export class PluginManager {
     await this.stopPlugin(s.plugin.id)
     rmSync(target, { recursive: true, force: true })
     mkdirSync(pluginsDir(), { recursive: true })
-    renameSync(s.root, target)
+    // A relative-path plugin lives inside the marketplace cache, outside staging: copy, don't move.
+    if (isInside(s.root, s.dir)) renameSync(s.root, target)
+    else cpSync(s.root, target, { recursive: true, filter: (src) => !/[\\/]\.git([\\/]|$)/.test(src) })
     rmSync(s.dir, { recursive: true, force: true })
 
     const installed = readPlugin(target, s.plugin.id)
     this.plugins = [...this.plugins.filter((p) => p.id !== installed.id), installed]
     this.state.enabled[installed.id] = true
+    const origins = (this.state.origins ??= {})
+    if (s.origin) origins[installed.id] = s.origin
+    else delete origins[installed.id]
     this.saveState()
     await this.startPlugin(installed)
+    this.onChange()
     return this.list()
   }
 
@@ -224,6 +230,7 @@ export class PluginManager {
     this.saveState()
     if (enabled) await this.startPlugin(p)
     else await this.stopPlugin(id)
+    this.onChange()
     return this.list()
   }
 
@@ -236,7 +243,9 @@ export class PluginManager {
     }
     this.plugins = this.plugins.filter((x) => x.id !== id)
     delete this.state.enabled[id]
+    delete this.state.origins?.[id]
     this.saveState()
+    this.onChange()
     return this.list()
   }
 

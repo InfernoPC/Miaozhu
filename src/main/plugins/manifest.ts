@@ -167,7 +167,16 @@ export function readPlugin(dir: string, id = basename(dir)): LoadedPlugin {
   const skills = readSkills(dir, warnings)
   const mcpServers = readMcpServers(dir, manifest, warnings)
   const tools = readDeclaredTools(dir, warnings)
-  if (!skills.length && !mcpServers.length && !tools.length) warnings.push('這個外掛沒有任何技能、MCP 伺服器或工具')
+  // Parts of the Claude Code plugin format that only mean something inside Claude Code.
+  const claudeOnly = [
+    ['commands', '斜線指令'],
+    ['agents', '子代理'],
+    ['hooks', 'hooks'],
+    ['output-styles', '輸出風格'],
+    ['lsp', 'LSP 伺服器']
+  ].filter(([key]) => existsSync(join(dir, key)) || (manifest && manifest[key] !== undefined))
+  if (claudeOnly.length) warnings.push(`包含${claudeOnly.map(([, label]) => label).join('、')}，這些只在 Claude Code 裡有作用，喵助不會使用`)
+  if (!skills.length && !mcpServers.length && !tools.length) warnings.push('這個外掛沒有喵助能用的技能、MCP 伺服器或工具')
 
   return {
     id,

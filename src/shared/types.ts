@@ -188,9 +188,44 @@ export interface PluginView {
   secrets: { name: string; isSet: boolean }[]
   /** Problems found while reading it (a bad YAML file, a name clash…). */
   warnings: string[]
+  /** Set when it was installed from a marketplace. */
+  origin?: { marketplace: string; entry: string; version?: string; sha?: string }
 }
 
-export type PluginSource = { kind: 'folder' } | { kind: 'zip' } | { kind: 'git'; url: string }
+export interface MarketplaceEntryView {
+  name: string
+  description?: string
+  version?: string
+  category?: string
+  tags: string[]
+  author?: string
+  homepage?: string
+  /** Where the plugin is downloaded from, in short. */
+  sourceLabel: string
+  /** False for npm / command sources, which this app doesn't fetch. */
+  supported: boolean
+  installed?: { pluginId: string; updateAvailable: boolean }
+}
+
+export interface MarketplaceView {
+  name: string
+  description?: string
+  owner?: string
+  /** Where the catalog comes from, e.g. github.com/owner/repo. */
+  source: string
+  isDefault: boolean
+  status: 'not-loaded' | 'loading' | 'ready' | 'error'
+  error?: string
+  updatedAt?: string
+  entries: MarketplaceEntryView[]
+  warnings: string[]
+}
+
+export type PluginSource =
+  | { kind: 'folder' }
+  | { kind: 'zip' }
+  | { kind: 'git'; url: string }
+  | { kind: 'marketplace'; marketplace: string; entry: string }
 
 /** A plugin read into a staging area, shown for review before it's installed. */
 export interface PluginPreview {
@@ -249,6 +284,14 @@ export interface DesktopApi {
     remove(id: string): Promise<PluginView[]>
     setSecret(id: string, name: string, value: string): Promise<PluginView[]>
     onChange(cb: () => void): () => void
+  }
+  marketplaces: {
+    list(): Promise<MarketplaceView[]>
+    /** `owner/repo`, a git URL, a link to marketplace.json, or a local folder. */
+    add(input: string): Promise<MarketplaceView[]>
+    remove(name: string, uninstallPlugins: boolean): Promise<MarketplaceView[]>
+    /** Downloads the catalog again (or for the first time). */
+    refresh(name: string): Promise<MarketplaceView[]>
   }
   files: {
     /** Absolute path of a dropped File (Electron removed File.path in sandboxed renderers). */

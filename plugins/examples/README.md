@@ -43,3 +43,22 @@ Put a `.mcp.json` next to `.claude-plugin/` (same format as Claude Code):
 | `timeout_seconds` | Optional, default 30 |
 
 Secret values are removed from tool output and errors before the model or the UI sees them.
+
+## Publishing a marketplace for your team
+
+Put a `.claude-plugin/marketplace.json` at the root of a Git repository (same format as Claude Code):
+
+```json
+{
+  "name": "acme-tools",
+  "owner": { "name": "Acme IT" },
+  "description": "Acme internal plugins",
+  "plugins": [
+    { "name": "team-toolkit", "source": "./plugins/team-toolkit", "version": "1.0.0" },
+    { "name": "erp", "source": { "source": "github", "repo": "acme/erp-plugin", "sha": "<40-char commit>" } },
+    { "name": "helper", "source": { "source": "git-subdir", "url": "acme/monorepo", "path": "tools/helper" } }
+  ]
+}
+```
+
+Colleagues add it in **設定 → 外掛 → 探索市集** with `acme/acme-tools` (GitHub), the repository's Git URL, or a folder path. Supported plugin sources: relative path, `github`, `url` (git), `git-subdir` and `archive` (HTTPS zip, `sha256` checked). `npm` and `command` sources are shown but not installed. Bump `version` (or the pinned `sha`) to make "update available" appear for people who already installed it.

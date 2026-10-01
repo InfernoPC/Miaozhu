@@ -110,7 +110,7 @@ export const webSearch: ToolDef = {
 // ── web_fetch ───────────────────────────────────────────────────────────────
 
 /** Intranet / local addresses: fetching these is asked first, since page content could be sent onward. */
-function isPrivateHost(hostname: string): boolean {
+export function isPrivateHost(hostname: string): boolean {
   const h = hostname.toLowerCase().replace(/^\[|\]$/g, '')
   if (h === 'localhost' || !h.includes('.') || /\.(local|internal|lan|corp|home|intranet)$/.test(h)) return true
   if (h === '::1' || /^f[cd][0-9a-f]{2}:/.test(h) || h.startsWith('fe80:')) return true

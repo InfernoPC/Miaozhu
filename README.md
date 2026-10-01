@@ -38,7 +38,9 @@ It connects to any OpenAI-compatible API, can use tools on your computer (files,
 
 **Plugins** (Settings → 外掛)
 - Compatible with Claude Code plugins: `SKILL.md` skills, MCP servers (`.mcp.json`, stdio or HTTP), plus tools declared in YAML (HTTP or CLI) with no code.
-- Install from a folder, a zip file or a Git URL. Before anything runs you see every skill, the exact MCP command lines and each tool's risk level.
+- Browse multiple marketplaces in the Claude Code `marketplace.json` format. Anthropic's official marketplace is added by default; add your team's with `owner/repo`, a Git URL, a link to `marketplace.json` or a local folder. Installed plugins show when an update is available.
+- Or install directly from a folder, a zip file or a Git URL. Either way, before anything runs you see every skill, the exact MCP command lines and each tool's risk level.
+- Plugin parts that only work inside Claude Code (slash commands, subagents, hooks) are flagged in the review.
 - Skills are listed to the model by name and description only and loaded when needed. MCP tool calls ask first.
 - Secrets for declared tools are stored encrypted and scrubbed from output. CLI tools run without a shell, so arguments can't inject commands.
 - See [`plugins/examples`](plugins/examples) for a working example and the YAML reference.
