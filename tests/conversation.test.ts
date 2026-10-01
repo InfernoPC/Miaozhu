@@ -16,7 +16,9 @@ const settings = (): AgentSettings => ({
   allowedFolders: () => [sb.path('Documents')],
   searchCredentials: () => ({ config: { provider: 'none' } }),
   persona: () => undefined,
-  places: () => []
+  places: () => [],
+  sensitiveFolders: () => [],
+  localProfile: () => null
 })
 
 beforeAll(async () => {

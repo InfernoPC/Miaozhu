@@ -25,6 +25,8 @@ interface ConfigFile {
   /** Missing = default persona. */
   persona?: string
   places?: SavedPlace[]
+  sensitiveFolders?: string[]
+  localProfileId?: string
 }
 
 /** Search API keys share the secrets file with profile keys under this id. */
@@ -55,8 +57,32 @@ export class SettingsStore {
       defaultPersona: DEFAULT_PERSONA,
       fixedRules: fixedRules(),
       maxPersonaChars: MAX_PERSONA_CHARS,
-      places: this.places()
+      places: this.places(),
+      sensitiveFolders: this.sensitiveFolders(),
+      localProfileId: this.localProfile()?.id ?? null
     }
+  }
+
+  sensitiveFolders(): string[] {
+    return this.config.sensitiveFolders ?? []
+  }
+
+  setSensitiveFolders(folders: string[]): SettingsView {
+    this.config.sensitiveFolders = [...new Set(folders)]
+    this.persist()
+    return this.view()
+  }
+
+  /** The configured local profile, only while it still exists and is marked local. */
+  localProfile(): ProviderProfile | null {
+    const p = this.config.profiles.find((x) => x.id === this.config.localProfileId)
+    return p?.isLocal ? p : null
+  }
+
+  setLocalProfile(id: string | null): SettingsView {
+    this.config.localProfileId = id ?? undefined
+    this.persist()
+    return this.view()
   }
 
   places(): SavedPlace[] {

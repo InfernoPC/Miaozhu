@@ -47,6 +47,55 @@ export function FoldersTab() {
       </section>
 
       <section>
+        <h2>敏感資料夾</h2>
+        <p className="hint">
+          放薪資、合約、個資等資料的資料夾。喵助一讀到這裡的檔案，這段對話就會改用本機模型回答，內容不會送到雲端；之後連網也會先問你。
+        </p>
+        <ul className="folder-list">
+          {view.sensitiveFolders.map((f) => (
+            <li key={f}>
+              <span className="folder-path">
+                <Icon name="folder" size={16} />
+                {f}
+              </span>
+              <button onClick={async () => setView(await window.api.settings.removeSensitiveFolder(f))}>移除</button>
+            </li>
+          ))}
+          {view.sensitiveFolders.length === 0 && <li className="hint">沒有設定敏感資料夾。</li>}
+        </ul>
+        <div className="actions">
+          <button onClick={async () => setView(await window.api.settings.addSensitiveFolder())}>
+            <Icon name="plus" size={15} />
+            新增敏感資料夾
+          </button>
+        </div>
+        <label className="field">
+          <span>使用的本機模型</span>
+          <select
+            value={view.localProfileId ?? ''}
+            onChange={async (e) => setView(await window.api.settings.setLocalProfile(e.target.value || null))}
+          >
+            <option value="">（未指定）</option>
+            {view.profiles
+              .filter((p) => p.isLocal)
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}（{p.model}）
+                </option>
+              ))}
+          </select>
+          <small>
+            {view.profiles.some((p) => p.isLocal)
+              ? '沒有指定時，喵助不會讀取敏感資料夾裡的檔案。'
+              : '還沒有本機模型連線。到「模型連線」新增 Ollama 或 LM Studio，並勾選「這是本機模型」。沒有指定時，喵助不會讀取敏感資料夾裡的檔案。'}
+          </small>
+        </label>
+        {view.sensitiveFolders.length > 0 && !view.localProfileId && (
+          <p className="status err">已設定敏感資料夾，但還沒指定本機模型：喵助會拒絕讀取這些資料夾。</p>
+        )}
+      </section>
+
+      <section>
         <h2>需要確認的操作</h2>
         <table className="rule-table">
           <tbody>

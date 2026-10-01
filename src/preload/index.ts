@@ -31,7 +31,10 @@ const api: DesktopApi = {
     testSearch: (input) => ipcRenderer.invoke('settings:testSearch', input),
     openAuditLog: () => ipcRenderer.invoke('settings:openAuditLog'),
     savePersona: (text) => ipcRenderer.invoke('settings:savePersona', text),
-    savePlaces: (places) => ipcRenderer.invoke('settings:savePlaces', places)
+    savePlaces: (places) => ipcRenderer.invoke('settings:savePlaces', places),
+    addSensitiveFolder: () => ipcRenderer.invoke('settings:addSensitiveFolder'),
+    removeSensitiveFolder: (path) => ipcRenderer.invoke('settings:removeSensitiveFolder', path),
+    setLocalProfile: (id) => ipcRenderer.invoke('settings:setLocalProfile', id)
   },
   plugins: {
     list: () => ipcRenderer.invoke('plugins:list'),

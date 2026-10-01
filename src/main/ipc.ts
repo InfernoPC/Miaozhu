@@ -175,6 +175,17 @@ export function registerIpc(
     if (agent.guard.isBlocked(chosen)) throw new Error('這個資料夾屬於受保護的位置，不能加入')
     return settings.setAllowedFolders([...settings.allowedFolders(), chosen])
   })
+  ipcMain.handle('settings:addSensitiveFolder', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const options: Electron.OpenDialogOptions = { title: '選擇只能交給本機模型的資料夾', properties: ['openDirectory'] }
+    const res = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options)
+    if (res.canceled || !res.filePaths[0]) return settings.view()
+    return settings.setSensitiveFolders([...settings.sensitiveFolders(), res.filePaths[0]])
+  })
+  ipcMain.handle('settings:removeSensitiveFolder', (_e, path: string) =>
+    settings.setSensitiveFolders(settings.sensitiveFolders().filter((f) => f !== path))
+  )
+  ipcMain.handle('settings:setLocalProfile', (_e, id: string | null) => settings.setLocalProfile(id))
   ipcMain.handle('settings:removeAllowedFolder', (_e, path: string) =>
     settings.setAllowedFolders(settings.allowedFolders().filter((f) => f !== path))
   )

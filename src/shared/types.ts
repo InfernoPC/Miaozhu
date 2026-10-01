@@ -64,6 +64,10 @@ export interface SettingsView {
   fixedRules: string
   maxPersonaChars: number
   places: SavedPlace[]
+  /** Folders whose contents may only go to a local model. */
+  sensitiveFolders: string[]
+  /** The local profile used for them; must be marked isLocal. */
+  localProfileId: string | null
 }
 
 export interface SaveSearchInput {
@@ -312,6 +316,9 @@ export interface DesktopApi {
     /** '' restores the default persona. */
     savePersona(text: string): Promise<SettingsView>
     savePlaces(places: SavedPlace[]): Promise<SettingsView>
+    addSensitiveFolder(): Promise<SettingsView>
+    removeSensitiveFolder(path: string): Promise<SettingsView>
+    setLocalProfile(id: string | null): Promise<SettingsView>
   }
   plugins: {
     list(): Promise<PluginView[]>

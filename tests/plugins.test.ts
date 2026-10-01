@@ -304,7 +304,9 @@ describe('in a conversation', () => {
         allowedFolders: () => [],
         searchCredentials: () => ({ config: { provider: 'none' } }),
         persona: () => undefined,
-        places: () => []
+        places: () => [],
+        sensitiveFolders: () => [],
+        localProfile: () => null
       },
       (e) => {
         if (e.type === 'permission-request') {

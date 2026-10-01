@@ -32,6 +32,10 @@ export interface AgentSettings {
   persona(): string | undefined
   /** Named places for "near me" and route starts. */
   places(): SavedPlace[]
+  /** Folders whose contents may only be sent to a local model. */
+  sensitiveFolders(): string[]
+  /** The local (isLocal) profile used once a conversation holds sensitive content. */
+  localProfile(): ProviderProfile | null
 }
 
 /** Tools and skills contributed by installed plugins (M3). */
@@ -82,7 +86,8 @@ export class Agent {
   ) {
     this.guard = new PermissionGuard(
       () => this.settings.allowedFolders(),
-      (req) => this.askUser(req)
+      (req) => this.askUser(req),
+      () => this.settings.sensitiveFolders()
     )
     // Reopen whatever conversation was open last time.
     const current = deps.store?.current()
@@ -91,8 +96,12 @@ export class Agent {
       this.conversationId = current
       this.history = saved.history
       this.turns = saved.turns
+      this.localOnly = !!saved.localOnly
     }
   }
+
+  /** Once true for a conversation, every model call in it goes to the local profile. */
+  private localOnly = false
 
   /** The open conversation; a new one has an id before it's first saved. */
   private conversationId: string = randomUUID()
@@ -105,7 +114,7 @@ export class Agent {
   openConversation(id: string): void {
     const saved = this.deps.store?.load(id)
     if (!saved) return
-    this.switchTo(id, saved.history, saved.turns)
+    this.switchTo(id, saved.history, saved.turns, !!saved.localOnly)
     this.deps.store?.setCurrent(id)
   }
 
@@ -120,11 +129,12 @@ export class Agent {
     if (id === this.conversationId) this.newConversation()
   }
 
-  private switchTo(id: string, history: ChatMessage[], turns: LLMMessage[][]): void {
+  private switchTo(id: string, history: ChatMessage[], turns: LLMMessage[][], localOnly = false): void {
     this.cancel()
     this.conversationId = id
     this.history = history
     this.turns = turns
+    this.localOnly = localOnly
     this.guard.resetSession()
     this.broadcast({ type: 'conversation-changed', id })
   }
@@ -187,17 +197,19 @@ export class Agent {
 
     const controller = new AbortController()
     this.controller = controller
-    const turn: LLMMessage[] = [{ role: 'user', content: await this.buildUserContent(trimmed, attachments) }]
+    const turn: LLMMessage[] = [{ role: 'user', content: await this.buildUserContent(trimmed, attachments, assistant) }]
     this.turns.push(turn)
 
     try {
-      const profile = this.settings.activeProfile()
-      if (!profile) throw new Error('尚未設定模型連線，請右鍵點貓咪 →「設定」新增連線')
-      const provider = createProvider(profile, this.settings.getApiKey(profile.id))
-      const toolKey = `${profile.id}:${profile.model}`
-
       let step = 0
       for (; step < MAX_STEPS; step++) {
+        // Chosen per step: reading a sensitive file mid-turn switches the rest to the local model.
+        const profile = this.localOnly ? this.settings.localProfile() : this.settings.activeProfile()
+        if (!profile) {
+          throw new Error(this.localOnly ? '這段對話含有敏感資料夾的內容，但本機模型連線不見了，請到「設定 → 檔案權限」重新指定' : '尚未設定模型連線，請右鍵點貓咪 →「設定」新增連線')
+        }
+        const provider = createProvider(profile, this.settings.getApiKey(profile.id))
+        const toolKey = `${profile.id}:${profile.model}`
         let text = ''
         let calls: ToolCall[] = []
         const useTools = !this.noTools.has(toolKey)
@@ -258,7 +270,7 @@ export class Agent {
       }
       history.push(assistant)
       if (conversationId === this.conversationId) {
-        this.deps.store?.save(conversationId, { history, turns: this.turns })
+        this.deps.store?.save(conversationId, { history, turns: this.turns, localOnly: this.localOnly })
         this.broadcast({ type: 'turn-end', message: assistant })
       }
     }
@@ -306,8 +318,19 @@ export class Agent {
     view.title = tool.title(input)
     this.updateTool(assistant, view)
 
+    if (!this.localOnly && (await this.guard.touchesSensitive(tool, input))) {
+      const local = this.settings.localProfile()
+      if (!local) {
+        const reason = '這個資料夾設定為只能交給本機模型處理，但還沒有指定本機模型（設定 → 檔案權限）'
+        this.updateTool(assistant, { ...view, status: 'denied', summary: reason })
+        void audit({ tool: tool.spec.name, input, verdict: 'blocked' })
+        return { text: `操作沒有執行：${reason}` }
+      }
+      this.enterLocalOnly(assistant, local)
+    }
+
     this.activeTool = { view, assistant }
-    const verdict = await this.guard.authorize(tool, input).finally(() => (this.activeTool = null))
+    const verdict = await this.guard.authorize(tool, input, { localOnly: this.localOnly }).finally(() => (this.activeTool = null))
     if (!verdict.allowed) {
       this.updateTool(assistant, { ...view, status: verdict.byUser ? 'denied' : 'error', summary: verdict.reason })
       void audit({ tool: tool.spec.name, input, verdict: verdict.byUser ? 'denied' : 'blocked' })
@@ -347,10 +370,24 @@ export class Agent {
     })
   }
 
-  private async buildUserContent(text: string, attachments: AttachmentView[]): Promise<UserContent[]> {
+  /** From now on this conversation only talks to the local model; says so once in the reply. */
+  private enterLocalOnly(assistant: ChatMessage, local: ProviderProfile): void {
+    this.localOnly = true
+    this.appendText(assistant, `（讀到敏感資料夾的內容，這段對話之後都改用本機模型「${local.name}」回答，資料不會送出這台電腦）\n\n`)
+  }
+
+  private async buildUserContent(text: string, attachments: AttachmentView[], assistant: ChatMessage): Promise<UserContent[]> {
     const content: UserContent[] = []
     const notes: string[] = []
     for (const a of attachments) {
+      if (!this.localOnly && (await this.guard.isSensitivePath(a.path))) {
+        const local = this.settings.localProfile()
+        if (!local) {
+          notes.push(`⛔ ${displayPath(a.path)}：在敏感資料夾裡，只能交給本機模型，但還沒有指定本機模型，所以沒有讀取`)
+          continue
+        }
+        this.enterLocalOnly(assistant, local)
+      }
       // Dropping a file is explicit consent to read it — but never a protected one.
       if (this.guard.isBlocked(await realPath(a.path))) {
         notes.push(`⛔ ${displayPath(a.path)}：屬於受保護的位置（帳號憑證、瀏覽器資料等），不會讀取`)

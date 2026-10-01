@@ -64,7 +64,9 @@ describe('in a conversation', () => {
         allowedFolders: () => [],
         searchCredentials: () => ({ config: { provider: 'none' } }),
         persona: () => persona,
-        places: () => []
+        places: () => [],
+        sensitiveFolders: () => [],
+        localProfile: () => null
       },
       () => {}
     )

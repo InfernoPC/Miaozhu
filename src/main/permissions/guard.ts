@@ -77,8 +77,26 @@ export class PermissionGuard {
 
   constructor(
     private allowedFolders: () => string[],
-    private ask: AskUser
+    private ask: AskUser,
+    private sensitiveFolders: () => string[] = () => []
   ) {}
+
+  /** Whether this call touches a folder whose contents may only go to a local model. */
+  async touchesSensitive(tool: ToolDef, input: Record<string, unknown>): Promise<boolean> {
+    const roots = bothSpellings(this.sensitiveFolders().map(expandPath))
+    if (!roots.length) return false
+    for (const a of tool.paths?.(input) ?? []) {
+      const real = await realPath(expandPath(a.path))
+      if (roots.some((r) => isInside(real, r))) return true
+    }
+    return false
+  }
+
+  async isSensitivePath(abs: string): Promise<boolean> {
+    const roots = bothSpellings(this.sensitiveFolders().map(expandPath))
+    const real = await realPath(abs)
+    return roots.some((r) => isInside(real, r))
+  }
 
   resetSession(): void {
     this.sessionTools.clear()
@@ -92,7 +110,11 @@ export class PermissionGuard {
 
   isBlocked = (abs: string): boolean => this.blocked.some((b) => isInside(abs, b))
 
-  async authorize(tool: ToolDef, input: Record<string, unknown>): Promise<Verdict> {
+  /**
+   * `localOnly`: the conversation holds sensitive content, so any network call could carry it
+   * off the machine (a URL or search query is enough) and is asked about every time.
+   */
+  async authorize(tool: ToolDef, input: Record<string, unknown>, opts: { localOnly?: boolean } = {}): Promise<Verdict> {
     const accesses = await Promise.all(
       (tool.paths?.(input) ?? []).map(async (a) => ({ ...a, real: await realPath(expandPath(a.path)) }))
     )
@@ -110,7 +132,8 @@ export class PermissionGuard {
       if (!outside) return { allowed: true, asked: false }
       reason = `${displayPath(outside.real)} 不在允許讀取的資料夾清單中`
     } else if (tool.risk === 'network') {
-      reason = tool.askReason?.(input)
+      if (opts.localOnly && this.sessionTools.has(tool.spec.name)) return { allowed: true, asked: false }
+      reason = opts.localOnly ? '這段對話含有敏感資料夾的內容，連網可能把資料送出這台電腦' : tool.askReason?.(input)
       if (!reason) return { allowed: true, asked: false }
     } else if (this.sessionTools.has(tool.spec.name)) {
       return { allowed: true, asked: false }

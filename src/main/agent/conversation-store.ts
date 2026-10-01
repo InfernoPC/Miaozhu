@@ -15,6 +15,8 @@ const TITLE_CHARS = 28
 export interface SavedConversation {
   history: ChatMessage[]
   turns: LLMMessage[][]
+  /** Holds content from a sensitive folder: only a local model may see it, ever. */
+  localOnly?: boolean
 }
 
 interface ConversationFile extends SavedConversation {
@@ -105,7 +107,7 @@ export class ConversationStore {
 
   load(id: string): SavedConversation | null {
     const f = this.read(id)
-    return f ? { history: f.history, turns: f.turns } : null
+    return f ? { history: f.history, turns: f.turns, localOnly: f.localOnly } : null
   }
 
   current(): string | undefined {
@@ -117,7 +119,7 @@ export class ConversationStore {
     writeJson(indexPath(), { current: id })
   }
 
-  save(id: string, { history, turns }: SavedConversation): void {
+  save(id: string, { history, turns, localOnly }: SavedConversation): void {
     if (!isId(id) || !history.length) return
     const existing = this.read(id)
     const now = new Date().toISOString()
@@ -129,7 +131,8 @@ export class ConversationStore {
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
       history: history.slice(-MAX_DISPLAY_MESSAGES),
-      turns: withoutImages(turns.slice(-MAX_TURNS))
+      turns: withoutImages(turns.slice(-MAX_TURNS)),
+      localOnly: localOnly || existing?.localOnly || undefined
     })
     this.setCurrent(id)
   }
