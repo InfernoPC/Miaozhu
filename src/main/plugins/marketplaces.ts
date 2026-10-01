@@ -91,6 +91,7 @@ export class MarketplaceManager {
       author: e.author,
       homepage: e.homepage,
       sourceLabel: describeEntrySource(e.source),
+      popularity: e.popularity,
       supported: e.source.kind !== 'unsupported',
       installed: match ? { pluginId: match.id, updateAvailable } : undefined
     }

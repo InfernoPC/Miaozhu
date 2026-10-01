@@ -54,7 +54,7 @@ Put a `.claude-plugin/marketplace.json` at the root of a Git repository (same fo
   "owner": { "name": "Acme IT" },
   "description": "Acme internal plugins",
   "plugins": [
-    { "name": "team-toolkit", "source": "./plugins/team-toolkit", "version": "1.0.0" },
+    { "name": "team-toolkit", "source": "./plugins/team-toolkit", "version": "1.0.0", "metadata": { "installs": 128 } },
     { "name": "erp", "source": { "source": "github", "repo": "acme/erp-plugin", "sha": "<40-char commit>" } },
     { "name": "helper", "source": { "source": "git-subdir", "url": "acme/monorepo", "path": "tools/helper" } }
   ]
@@ -62,3 +62,7 @@ Put a `.claude-plugin/marketplace.json` at the root of a Git repository (same fo
 ```
 
 Colleagues add it in **設定 → 外掛 → 探索市集** with `acme/acme-tools` (GitHub), the repository's Git URL, or a folder path. Supported plugin sources: relative path, `github`, `url` (git), `git-subdir` and `archive` (HTTPS zip, `sha256` checked). `npm` and `command` sources are shown but not installed. Bump `version` (or the pinned `sha`) to make "update available" appear for people who already installed it.
+
+### Popularity
+
+`marketplace.json` has no standard install-count field, and Claude Code publishes none. If your marketplace tracks installs, put the number in the entry's free-form `metadata` (which Claude Code ignores): `metadata.installs`, `metadata.downloads` or `metadata.popularity`. The **熱門** sort orders by it, highest first; entries without a number follow in catalog order.

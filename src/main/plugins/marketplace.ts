@@ -33,6 +33,21 @@ export interface CatalogEntry {
   author?: string
   homepage?: string
   source: EntrySource
+  popularity?: { value: number; kind: 'installs' | 'downloads' | 'score' }
+}
+
+/**
+ * Claude Code catalogs carry no install counts, but entries may set a free-form `metadata`
+ * object for the marketplace's own use; a marketplace that tracks installs can publish them there.
+ */
+function popularityOf(metadata: unknown): CatalogEntry['popularity'] {
+  if (!metadata || typeof metadata !== 'object') return undefined
+  const m = metadata as Record<string, unknown>
+  for (const [key, kind] of [['installs', 'installs'], ['downloads', 'downloads'], ['popularity', 'score']] as const) {
+    const v = typeof m[key] === 'string' ? Number(m[key]) : m[key]
+    if (typeof v === 'number' && Number.isFinite(v) && v >= 0) return { value: v, kind }
+  }
+  return undefined
 }
 
 export interface Catalog {
@@ -145,7 +160,8 @@ export function parseCatalog(json: unknown): Catalog {
       tags: Array.isArray(p.tags) ? p.tags.filter((t: unknown) => typeof t === 'string') : [],
       author: typeof p.author === 'string' ? p.author : typeof p.author?.name === 'string' ? p.author.name : undefined,
       homepage: typeof p.homepage === 'string' ? p.homepage : undefined,
-      source: normalizeSource(p.source, pluginRoot)
+      source: normalizeSource(p.source, pluginRoot),
+      popularity: popularityOf(p.metadata)
     })
   })
   return {

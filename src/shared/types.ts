@@ -202,6 +202,8 @@ export interface MarketplaceEntryView {
   homepage?: string
   /** Where the plugin is downloaded from, in short. */
   sourceLabel: string
+  /** Popularity the marketplace itself publishes (entry metadata.installs / downloads / popularity). */
+  popularity?: { value: number; kind: 'installs' | 'downloads' | 'score' }
   /** False for npm / command sources, which this app doesn't fetch. */
   supported: boolean
   installed?: { pluginId: string; updateAvailable: boolean }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { popularityLabel, sortCatalog, type CatalogSort } from '@shared/catalog-sort'
 import type { MarketplaceView, PluginSource } from '@shared/types'
 import { Icon } from '../common/Icon'
 
@@ -12,6 +13,7 @@ export function MarketplaceBrowser({ onInspect, busy }: { onInspect: (source: Pl
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<string>('all')
+  const [sort, setSort] = useState<CatalogSort>('default')
   const [limit, setLimit] = useState(PAGE)
   const [removing, setRemoving] = useState<string | null>(null)
 
@@ -24,12 +26,13 @@ export function MarketplaceBrowser({ onInspect, busy }: { onInspect: (source: Pl
 
   const entries = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return markets
+    const matching = markets
       .filter((m) => filter === 'all' || m.name === filter)
       .flatMap((m) => m.entries.map((e) => ({ ...e, marketplace: m.name })))
       .filter((e) => !q || [e.name, e.description, e.category, e.author, ...e.tags].some((v) => v?.toLowerCase().includes(q)))
-      .sort((a, b) => Number(!!b.installed?.updateAvailable) - Number(!!a.installed?.updateAvailable) || Number(b.supported) - Number(a.supported))
-  }, [markets, query, filter])
+    return sortCatalog(matching, sort)
+  }, [markets, query, filter, sort])
+  const anyPopularity = useMemo(() => markets.some((m) => m.entries.some((e) => e.popularity)), [markets])
 
   const add = async () => {
     setError(null)
@@ -112,7 +115,15 @@ export function MarketplaceBrowser({ onInspect, busy }: { onInspect: (source: Pl
               </option>
             ))}
           </select>
+          <select value={sort} aria-label="排序" onChange={(e) => (setSort(e.target.value as CatalogSort), setLimit(PAGE))}>
+            <option value="default">預設排序</option>
+            <option value="popular">熱門</option>
+            <option value="name">名稱</option>
+          </select>
         </div>
+        {sort === 'popular' && !anyPopularity && (
+          <p className="hint">這些 marketplace 沒有提供安裝數，排序維持原本順序。marketplace 可以在外掛項目的 metadata.installs 提供數字。</p>
+        )}
         <ul className="catalog">
           {entries.slice(0, limit).map((e) => (
             <li key={`${e.marketplace}/${e.name}`} className={e.supported ? '' : 'entry-unsupported'}>
@@ -129,7 +140,7 @@ export function MarketplaceBrowser({ onInspect, busy }: { onInspect: (source: Pl
                 </div>
                 {e.description && <p className="entry-desc">{e.description}</p>}
                 <p className="entry-meta">
-                  {[e.author, e.category, filter === 'all' ? e.marketplace : null].filter(Boolean).join('，')}
+                  {[e.popularity ? popularityLabel(e.popularity) : null, e.author, e.category, filter === 'all' ? e.marketplace : null].filter(Boolean).join('，')}
                   {!e.supported && `（${e.sourceLabel}）`}
                 </p>
               </div>
