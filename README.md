@@ -14,6 +14,7 @@ It connects to any OpenAI-compatible API, can use tools on your computer (files,
 - Click the cat to type a question; the reply appears in a speech balloon above it.
 - Double-click for a full chat window with Markdown rendering.
 - Drag files or folders onto the cat to attach them, with quick actions like "summarize" or "translate".
+- Meme gallery ("梗圖庫" on the cat's right-click menu): browse a folder of stickers and memes, click one to copy it (GIF / APNG go as files, so they keep moving when pasted into LINE or Teams), drag images out or in, paste with ⌘V / Ctrl+V, and rename, move or delete (to the Trash). Point it at an existing folder in Settings → 梗圖庫. Optionally, a model that can see images tags each picture once (description, keywords, text in the image) so you can search by "thanks" or "tired"; the tags are stored inside the gallery folder.
 - Show it your screen: the camera button in the chat window (or "截圖問喵助" on the cat's right-click menu) takes a screenshot of a region, a window (macOS) or the whole screen and attaches it. Pasting an image (⌘V / Ctrl+V) works too.
 - Give it your own persona (name, personality, speaking style) in Settings → 角色. Language, honesty, permission and safety rules stay fixed underneath and can't be overridden by the persona.
 - Conversations are kept in a list: start a new one, reopen, rename or delete old ones.

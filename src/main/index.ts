@@ -3,6 +3,7 @@ import type { AgentEvent } from '@shared/types'
 import { Agent } from './agent/agent'
 import { ConversationStore } from './agent/conversation-store'
 import { cleanOldScreenshots } from './capture'
+import { GalleryService, registerGalleryScheme } from './gallery'
 import { registerIpc } from './ipc'
 import { PluginManager } from './plugins/manager'
 import { MarketplaceManager } from './plugins/marketplaces'
@@ -13,6 +14,8 @@ import { adoptLoginShellPath } from './util/shell-path'
 import { SettingsStore } from './settings/store'
 import { UpdateChecker } from './updates/updater'
 import { WindowManager } from './windows'
+
+registerGalleryScheme()
 
 // Only one pet on the desktop: a second launch focuses the first instance instead.
 if (!app.requestSingleInstanceLock()) app.quit()
@@ -57,7 +60,11 @@ app.whenReady().then(async () => {
       for (const win of windows.all()) if (!win.isDestroyed()) win.webContents.send('update:available', s)
     }
   })
-  registerIpc(agent, settings, windows, plugins, marketplaces, reminders, conversations, new SkinPackManager(), updates)
+  const gallery = new GalleryService(settings, agent.guard, (channel, payload) => {
+    for (const win of windows.all()) if (!win.isDestroyed()) win.webContents.send(channel, payload)
+  })
+  gallery.start()
+  registerIpc(agent, settings, windows, plugins, marketplaces, reminders, conversations, new SkinPackManager(), updates, gallery)
   reminders.start()
   updates.start()
   cleanOldScreenshots()
@@ -65,6 +72,7 @@ app.whenReady().then(async () => {
   app.on('before-quit', () => {
     reminders.stop()
     updates.stop()
+    gallery.stop()
     void plugins.stopAll()
   })
 

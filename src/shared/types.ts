@@ -94,6 +94,12 @@ export interface SettingsView {
   screenshotFolder: string
   /** The default temp folder, cleaned after a week; a chosen folder is never cleaned. */
   screenshotFolderIsDefault: boolean
+  galleryFolder: string
+  galleryFolderIsDefault: boolean
+  /** Tag new images automatically with a model that can see images. */
+  galleryAutoTag: boolean
+  /** null = the active profile. */
+  galleryTagProfileId: string | null
 }
 
 export interface SaveSearchInput {
@@ -331,6 +337,48 @@ export interface HitRect {
 }
 
 /** The API exposed on window.api by the preload script. */
+/** One folder in the meme gallery; paths are relative to the gallery root, with "/". */
+export interface GalleryFolderView {
+  name: string
+  rel: string
+  /** First image inside, for the folder's cover. */
+  cover?: string
+  imageCount: number
+}
+
+export interface GalleryImageView {
+  name: string
+  rel: string
+  size: number
+  mtime: number
+  /** GIF / APNG: copied as a file so it keeps moving where it's pasted. */
+  animated: boolean
+  /** From automatic tagging, when done. */
+  description?: string
+  tags?: string[]
+  text?: string
+}
+
+export interface GalleryListing {
+  root: string
+  /** "" for the root. */
+  rel: string
+  folders: GalleryFolderView[]
+  images: GalleryImageView[]
+}
+
+export interface GalleryTagStatus {
+  state: 'idle' | 'running' | 'stopped' | 'error'
+  done: number
+  total: number
+  /** Images that have tags, out of all images. */
+  tagged: number
+  images: number
+  message?: string
+}
+
+export type GalleryMenuAction = { action: 'copy' | 'open' | 'reveal' | 'rename' | 'delete' | 'retag' } | { action: 'move'; to: string }
+
 /** A screenshot the user takes: drag a region (or pick a window on macOS), or the whole screen. */
 export type CaptureMode = 'region' | 'full'
 
@@ -383,6 +431,9 @@ export interface DesktopApi {
     chooseScreenshotFolder(): Promise<SettingsView>
     resetScreenshotFolder(): Promise<SettingsView>
     openScreenshotFolder(): Promise<void>
+    chooseGalleryFolder(): Promise<SettingsView>
+    resetGalleryFolder(): Promise<SettingsView>
+    setGalleryTagging(autoTag: boolean, profileId: string | null): Promise<SettingsView>
   }
   plugins: {
     list(): Promise<PluginView[]>
@@ -460,6 +511,30 @@ export interface DesktopApi {
     onImage(cb: (dataUrl: string) => void): () => void
     done(rect: { x: number; y: number; width: number; height: number } | null): void
   }
+  gallery: {
+    list(rel: string): Promise<GalleryListing>
+    search(query: string): Promise<GalleryImageView[]>
+    /** Copies an image to the clipboard: as a picture, or as a file for GIF / APNG. */
+    copy(rel: string): Promise<'image' | 'file'>
+    /** Native right-click menu; resolves with what the user picked. */
+    menu(rel: string, kind: 'image' | 'folder'): Promise<GalleryMenuAction | null>
+    rename(rel: string, name: string): Promise<string>
+    move(rel: string, toFolder: string): Promise<string>
+    remove(rel: string): Promise<void>
+    mkdir(parent: string, name: string): Promise<string>
+    importFiles(paths: string[], toFolder: string): Promise<number>
+    /** Saves the clipboard's image into a folder; null when there is none. */
+    paste(toFolder: string): Promise<string | null>
+    startDrag(rel: string): void
+    openFolder(rel: string): Promise<void>
+    open(rel: string): Promise<void>
+    reveal(rel: string): Promise<void>
+    tagStatus(): Promise<GalleryTagStatus>
+    tag(rels?: string[]): Promise<void>
+    stopTagging(): Promise<void>
+    onChange(cb: () => void): () => void
+    onTagStatus(cb: (s: GalleryTagStatus) => void): () => void
+  }
   updates: {
     status(): Promise<UpdateStatus>
     check(): Promise<UpdateStatus>
@@ -471,5 +546,6 @@ export interface DesktopApi {
   windows: {
     openChat(): void
     openSettings(): void
+    openGallery(): void
   }
 }

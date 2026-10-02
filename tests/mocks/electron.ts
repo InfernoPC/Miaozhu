@@ -71,9 +71,20 @@ export const desktopCapturer = {
   getSources: async () => [{ display_id: '1', thumbnail: fakeImage(2880, 1800) }]
 }
 
-/** Clipboard items for a test to set: [{ mime: content }]. */
+export class ClipboardItem {
+  constructor(readonly data: Record<string, unknown>) {}
+  get types() {
+    return Object.keys(this.data)
+  }
+}
+
+/** Clipboard items for a test to set: [{ mime: content }]; `written` holds what the app wrote. */
 export const clipboard = {
   items: [] as Record<string, string>[],
+  written: [] as ClipboardItem[],
+  async write(items: ClipboardItem[]) {
+    clipboard.written = items
+  },
   async read() {
     return clipboard.items.map((item) => ({
       types: Object.keys(item),

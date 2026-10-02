@@ -1,4 +1,5 @@
-import { BrowserWindow, Menu, app, dialog, ipcMain, shell } from 'electron'
+import { BrowserWindow, Menu, app, clipboard, dialog, ipcMain, nativeImage, shell } from 'electron'
+import { fileURLToPath } from 'node:url'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import {
   type HitRect,
@@ -8,6 +9,7 @@ import {
   type SaveProfileInput,
   type SaveSearchInput,
   type AttachmentView,
+  type GalleryMenuAction,
   type CaptureMode,
   type TestResult
 } from '@shared/types'
@@ -24,6 +26,8 @@ import type { SkinPackManager } from './skins/skin-packs'
 import type { SettingsStore } from './settings/store'
 import { defaultScreenshotFolder, saveClipboardImage, takeScreenshot } from './capture'
 import { realPath } from './tools/paths'
+import type { GalleryService } from './gallery'
+import { copyImage } from './gallery/copy'
 import { launchInstaller, type UpdateChecker } from './updates/updater'
 import { searchWeb } from './tools/web'
 import type { WindowManager } from './windows'
@@ -86,7 +90,8 @@ export function registerIpc(
   reminders: ReminderService,
   conversations: ConversationStore,
   skins: SkinPackManager,
-  updates: UpdateChecker
+  updates: UpdateChecker,
+  gallery: GalleryService
 ): void {
   const installUpdate = () => {
     if (!app.isPackaged) throw new Error('開發版不能自動更新，請用 git pull')
@@ -323,6 +328,7 @@ export function registerIpc(
       },
       dndMenu(reminders),
       { label: '新對話', click: () => agent.newConversation() },
+      { label: '梗圖庫', click: () => windows.openGallery() },
       ...(updates.get().available ? [{ label: `更新到 ${updates.get().latest}…`, click: () => installUpdate() }] : []),
       { type: 'separator' },
       { label: '設定…', click: () => windows.openSettings() },
@@ -354,6 +360,8 @@ export function registerIpc(
     return path ? (await agent.describeAttachments([path]))[0] : null
   })
 
+  registerGalleryIpc(gallery, settings, agent)
+
   ipcMain.handle('updates:status', () => updates.get())
   ipcMain.handle('updates:check', () => updates.check())
   ipcMain.handle('updates:install', () => installUpdate())
@@ -363,5 +371,131 @@ export function registerIpc(
   })
 
   ipcMain.on('windows:openChat', () => windows.openChat())
+  ipcMain.on('windows:openGallery', () => windows.openGallery())
   ipcMain.on('windows:openSettings', () => windows.openSettings())
+}
+
+/** The meme gallery window and its settings. Every path is checked by the library. */
+function registerGalleryIpc(gallery: GalleryService, settings: SettingsStore, agent: Agent): void {
+  const { library, tags } = gallery
+  /** File changes made here: refresh windows right away, and keep tags with their files. */
+  const after = <T>(result: T): T => {
+    gallery.changed()
+    return result
+  }
+
+  ipcMain.handle('gallery:list', (_e, rel: string) => {
+    const listing = library.list(rel)
+    return { ...listing, images: tags.annotate(listing.images) }
+  })
+  ipcMain.handle('gallery:search', (_e, query: string) => tags.search(query))
+  ipcMain.handle('gallery:copy', (_e, rel: string) => copyImage(library.resolve(rel)))
+  ipcMain.handle('gallery:rename', (_e, rel: string, name: string) => {
+    const next = library.rename(rel, name)
+    tags.moved(rel, next)
+    return after(next)
+  })
+  ipcMain.handle('gallery:move', (_e, rel: string, to: string) => {
+    const next = library.move(rel, to)
+    tags.moved(rel, next)
+    return after(next)
+  })
+  ipcMain.handle('gallery:remove', async (_e, rel: string) => {
+    await library.remove(rel)
+    tags.removed(rel)
+    after(undefined)
+  })
+  ipcMain.handle('gallery:mkdir', (_e, parent: string, name: string) => after(library.mkdir(parent, name)))
+  ipcMain.handle('gallery:import', (_e, paths: string[], to: string) => after(library.importFiles(paths, to)))
+  ipcMain.handle('gallery:paste', async (_e, to: string) => {
+    for (const item of await clipboard.read()) {
+      // A copied file (Finder / Explorer) first: keeps GIFs animated.
+      if (item.types.includes('text/uri-list')) {
+        const urls = String(await item.getType('text/uri-list')).split(/\r?\n/).filter((u) => u.startsWith('file:'))
+        const n = library.importFiles(urls.map((u) => fileURLToPath(u)), to)
+        if (n) return after(`${n}`)
+      }
+      const type = item.types.find((t) => t.startsWith('image/'))
+      if (!type) continue
+      const bytes = Buffer.from(await ((await item.getType(type)) as Blob).arrayBuffer())
+      const png = type === 'image/png' ? bytes : nativeImage.createFromBuffer(bytes).toPNG()
+      if (png.length) return after(library.saveImage(png, '.png', to))
+    }
+    return null
+  })
+  ipcMain.on('gallery:startDrag', (e, rel: string) => {
+    try {
+      const file = library.resolve(rel)
+      const thumb = nativeImage.createFromPath(file)
+      // A drag needs an image; GIFs that nativeImage can't decode get a plain square.
+      const icon = thumb.isEmpty() ? nativeImage.createFromBitmap(Buffer.alloc(32 * 32 * 4, 0x80), { width: 32, height: 32 }) : thumb.resize({ width: 64 })
+      e.sender.startDrag({ file, icon })
+    } catch {
+      // Not in the gallery: no drag.
+    }
+  })
+  ipcMain.handle('gallery:openFolder', async (_e, rel: string) => {
+    await shell.openPath(library.resolve(rel))
+  })
+  ipcMain.handle('gallery:menu', (e, rel: string, kind: 'image' | 'folder') => {
+    return new Promise<GalleryMenuAction | null>((resolve) => {
+      let picked: GalleryMenuAction | null = null
+      const pick = (a: GalleryMenuAction) => () => (picked = a)
+      const here = rel.split('/').slice(0, -1).join('/')
+      const moveTargets = library
+        .allFolders()
+        .filter((f) => f !== here && f !== rel && !f.startsWith(`${rel}/`))
+        .slice(0, 40)
+        .map((f) => ({ label: f || '梗圖庫（最上層）', click: pick({ action: 'move', to: f }) }))
+      const template: Electron.MenuItemConstructorOptions[] = [
+        ...(kind === 'image'
+          ? [
+              { label: '複製', click: pick({ action: 'copy' }) },
+              { label: '開啟', click: pick({ action: 'open' }) },
+              { label: '重新產生標籤', click: pick({ action: 'retag' }) }
+            ]
+          : [{ label: '開啟資料夾', click: pick({ action: 'open' }) }]),
+        { label: process.platform === 'darwin' ? '在 Finder 中顯示' : '在檔案總管中顯示', click: pick({ action: 'reveal' }) },
+        { type: 'separator' },
+        { label: '重新命名…', click: pick({ action: 'rename' }) },
+        { label: '搬移到', enabled: moveTargets.length > 0, submenu: moveTargets },
+        { type: 'separator' },
+        { label: '丟到垃圾桶', click: pick({ action: 'delete' }) }
+      ]
+      Menu.buildFromTemplate(template).popup({
+        window: BrowserWindow.fromWebContents(e.sender) ?? undefined,
+        callback: () => setTimeout(() => resolve(picked), 0)
+      })
+    })
+  })
+  ipcMain.handle('gallery:reveal', (_e, rel: string) => shell.showItemInFolder(library.resolve(rel)))
+  ipcMain.handle('gallery:open', async (_e, rel: string) => {
+    await shell.openPath(library.resolve(rel))
+  })
+  ipcMain.handle('gallery:tagStatus', () => tags.status())
+  ipcMain.handle('gallery:tag', (_e, rels?: string[]) => void tags.run(rels))
+  ipcMain.handle('gallery:stopTagging', () => tags.stop())
+
+  ipcMain.handle('settings:chooseGalleryFolder', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const options: Electron.OpenDialogOptions = { title: '選擇梗圖庫資料夾', defaultPath: settings.galleryFolder(), properties: ['openDirectory', 'createDirectory'] }
+    const res = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options)
+    if (res.canceled || !res.filePaths[0]) return settings.view()
+    const chosen = res.filePaths[0]
+    if (agent.guard.isBlocked(await realPath(chosen))) throw new Error('這個資料夾屬於受保護的位置，請換一個')
+    const view = settings.setGalleryFolder(chosen)
+    gallery.restart()
+    return view
+  })
+  ipcMain.handle('settings:resetGalleryFolder', () => {
+    const view = settings.setGalleryFolder(null)
+    gallery.restart()
+    return view
+  })
+  ipcMain.handle('settings:setGalleryTagging', (_e, autoTag: boolean, profileId: string | null) => {
+    const view = settings.setGalleryTagging(autoTag, profileId)
+    if (autoTag) void tags.run()
+    else tags.stop()
+    return view
+  })
 }

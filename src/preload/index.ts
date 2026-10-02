@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { AgentEvent, AttachmentView, DesktopApi, DueReminder, PetSkinId, UpdateStatus } from '@shared/types'
+import type { AgentEvent, AttachmentView, DesktopApi, DueReminder, GalleryTagStatus, PetSkinId, UpdateStatus } from '@shared/types'
 
 const api: DesktopApi = {
   agent: {
@@ -37,7 +37,10 @@ const api: DesktopApi = {
     setLocalProfile: (id) => ipcRenderer.invoke('settings:setLocalProfile', id),
     chooseScreenshotFolder: () => ipcRenderer.invoke('settings:chooseScreenshotFolder'),
     resetScreenshotFolder: () => ipcRenderer.invoke('settings:resetScreenshotFolder'),
-    openScreenshotFolder: () => ipcRenderer.invoke('settings:openScreenshotFolder')
+    openScreenshotFolder: () => ipcRenderer.invoke('settings:openScreenshotFolder'),
+    chooseGalleryFolder: () => ipcRenderer.invoke('settings:chooseGalleryFolder'),
+    resetGalleryFolder: () => ipcRenderer.invoke('settings:resetGalleryFolder'),
+    setGalleryTagging: (autoTag, profileId) => ipcRenderer.invoke('settings:setGalleryTagging', autoTag, profileId)
   },
   plugins: {
     list: () => ipcRenderer.invoke('plugins:list'),
@@ -121,6 +124,35 @@ const api: DesktopApi = {
     },
     done: (rect) => ipcRenderer.send('snip:done', rect)
   },
+  gallery: {
+    list: (rel) => ipcRenderer.invoke('gallery:list', rel),
+    search: (query) => ipcRenderer.invoke('gallery:search', query),
+    copy: (rel) => ipcRenderer.invoke('gallery:copy', rel),
+    menu: (rel, kind) => ipcRenderer.invoke('gallery:menu', rel, kind),
+    rename: (rel, name) => ipcRenderer.invoke('gallery:rename', rel, name),
+    move: (rel, to) => ipcRenderer.invoke('gallery:move', rel, to),
+    remove: (rel) => ipcRenderer.invoke('gallery:remove', rel),
+    mkdir: (parent, name) => ipcRenderer.invoke('gallery:mkdir', parent, name),
+    importFiles: (paths, to) => ipcRenderer.invoke('gallery:import', paths, to),
+    paste: (to) => ipcRenderer.invoke('gallery:paste', to),
+    startDrag: (rel) => ipcRenderer.send('gallery:startDrag', rel),
+    openFolder: (rel) => ipcRenderer.invoke('gallery:openFolder', rel),
+    open: (rel) => ipcRenderer.invoke('gallery:open', rel),
+    reveal: (rel) => ipcRenderer.invoke('gallery:reveal', rel),
+    tagStatus: () => ipcRenderer.invoke('gallery:tagStatus'),
+    tag: (rels) => ipcRenderer.invoke('gallery:tag', rels),
+    stopTagging: () => ipcRenderer.invoke('gallery:stopTagging'),
+    onChange: (cb) => {
+      const listener = () => cb()
+      ipcRenderer.on('gallery:changed', listener)
+      return () => ipcRenderer.removeListener('gallery:changed', listener)
+    },
+    onTagStatus: (cb) => {
+      const listener = (_e: Electron.IpcRendererEvent, s: GalleryTagStatus) => cb(s)
+      ipcRenderer.on('gallery:tag-status', listener)
+      return () => ipcRenderer.removeListener('gallery:tag-status', listener)
+    }
+  },
   updates: {
     status: () => ipcRenderer.invoke('updates:status'),
     check: () => ipcRenderer.invoke('updates:check'),
@@ -134,7 +166,8 @@ const api: DesktopApi = {
   },
   windows: {
     openChat: () => ipcRenderer.send('windows:openChat'),
-    openSettings: () => ipcRenderer.send('windows:openSettings')
+    openSettings: () => ipcRenderer.send('windows:openSettings'),
+    openGallery: () => ipcRenderer.send('windows:openGallery')
   }
 }
 

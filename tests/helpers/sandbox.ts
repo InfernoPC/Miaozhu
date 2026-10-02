@@ -55,6 +55,7 @@ export function makeSandbox(): Sandbox {
   app.setPath('desktop', path('Desktop'))
   app.setPath('documents', path('Documents'))
   app.setPath('downloads', path('Downloads'))
+  app.setPath('pictures', path('Pictures'))
   mkdirSync(path('.app-data'))
 
   return { home, path, cleanup: () => rmSync(home, { recursive: true, force: true }) }

@@ -30,6 +30,11 @@ interface ConfigFile {
   localProfileId?: string
   /** Missing = the default temp folder. */
   screenshotFolder?: string
+  /** Missing = ~/Pictures/喵助梗圖. */
+  galleryFolder?: string
+  galleryAutoTag?: boolean
+  /** Missing = whichever profile is active. */
+  galleryTagProfileId?: string
 }
 
 /** Search API keys share the secrets file with profile keys under this id. */
@@ -64,8 +69,39 @@ export class SettingsStore {
       sensitiveFolders: this.sensitiveFolders(),
       localProfileId: this.localProfile()?.id ?? null,
       screenshotFolder: this.screenshotFolder(),
-      screenshotFolderIsDefault: !this.config.screenshotFolder
+      screenshotFolderIsDefault: !this.config.screenshotFolder,
+      galleryFolder: this.galleryFolder(),
+      galleryFolderIsDefault: !this.config.galleryFolder,
+      galleryAutoTag: !!this.config.galleryAutoTag,
+      galleryTagProfileId: this.config.galleryTagProfileId ?? null
     }
+  }
+
+  galleryFolder(): string {
+    return this.config.galleryFolder || join(app.getPath('pictures'), '喵助梗圖')
+  }
+
+  /** null = back to the default. The caller checks the folder isn't a protected one. */
+  setGalleryFolder(folder: string | null): SettingsView {
+    this.config.galleryFolder = folder ?? undefined
+    this.persist()
+    return this.view()
+  }
+
+  galleryAutoTag(): boolean {
+    return !!this.config.galleryAutoTag
+  }
+
+  /** The profile that tags images: the chosen one while it exists, else the active one. */
+  galleryTagProfile(): ProviderProfile | null {
+    return this.config.profiles.find((p) => p.id === this.config.galleryTagProfileId) ?? this.activeProfile()
+  }
+
+  setGalleryTagging(autoTag: boolean, profileId: string | null): SettingsView {
+    this.config.galleryAutoTag = autoTag || undefined
+    this.config.galleryTagProfileId = profileId ?? undefined
+    this.persist()
+    return this.view()
   }
 
   screenshotFolder(): string {

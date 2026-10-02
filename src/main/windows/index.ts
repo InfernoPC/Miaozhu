@@ -2,7 +2,7 @@ import { BrowserWindow, powerMonitor, screen, shell } from 'electron'
 import { join } from 'node:path'
 import type { HitRect } from '@shared/types'
 
-type Route = 'pet' | 'chat' | 'settings' | 'snip'
+type Route = 'pet' | 'chat' | 'settings' | 'snip' | 'gallery'
 
 // Tall enough for a reply balloon plus the input box above the cat; the empty part is transparent and click-through.
 const PET_SIZE = { width: 340, height: 520 }
@@ -68,6 +68,7 @@ export class WindowManager {
   pet: BrowserWindow | null = null
   private chat: BrowserWindow | null = null
   private settings: BrowserWindow | null = null
+  private gallery: BrowserWindow | null = null
   private dragOffset: { x: number; y: number } | null = null
   private hitRects: HitRect[] = []
   private ignoring = true
@@ -190,6 +191,23 @@ export class WindowManager {
     this.chat.on('closed', () => (this.chat = null))
     externalLinks(this.chat)
     load(this.chat, 'chat')
+  }
+
+  openGallery(): void {
+    if (this.gallery) return this.focus(this.gallery)
+    this.gallery = new BrowserWindow({
+      width: 900,
+      height: 680,
+      minWidth: 520,
+      minHeight: 420,
+      title: '梗圖庫',
+      show: false,
+      webPreferences: baseWebPreferences()
+    })
+    this.gallery.once('ready-to-show', () => this.gallery?.show())
+    this.gallery.on('closed', () => (this.gallery = null))
+    externalLinks(this.gallery)
+    load(this.gallery, 'gallery')
   }
 
   openSettings(): void {
