@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { PluginMcpView, PluginPreview, PluginSource, PluginView, ToolRisk } from '@shared/types'
 import { Icon } from '../common/Icon'
 import { MarketplaceBrowser } from './MarketplaceBrowser'
@@ -120,12 +120,108 @@ function SecretFields({ p, onSaved }: { p: PluginView; onSaved: (list: PluginVie
   )
 }
 
+/** Where an install stands; the dialog shows one step at a time. */
+type Review =
+  | { step: 'loading'; label: string }
+  | { step: 'confirm' | 'installing'; preview: PluginPreview; error?: string }
+  | { step: 'done'; plugin: PluginView }
+  | { step: 'failed'; error: string }
+
+/**
+ * Install review as a modal, so it shows wherever the user clicked "安裝" (the marketplace
+ * list can be long) and nothing behind it can be clicked meanwhile. Esc cancels.
+ */
+function ReviewDialog({ review, onInstall, onClose, onShow }: { review: Review; onInstall: () => void; onClose: () => void; onShow: (id: string) => void }) {
+  const ref = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    const d = ref.current
+    if (d && !d.open) d.showModal()
+  }, [])
+  const working = review.step === 'loading' || review.step === 'installing'
+  const preview = review.step === 'confirm' || review.step === 'installing' ? review.preview : null
+  const missingSecrets = review.step === 'done' ? review.plugin.secrets.filter((s) => !s.isSet).length : 0
+
+  return (
+    <dialog
+      ref={ref}
+      className="plugin-dialog"
+      aria-label="安裝外掛"
+      onCancel={(e) => {
+        e.preventDefault()
+        if (!working) onClose()
+      }}
+    >
+      {review.step === 'loading' && (
+        <div className="dialog-body dialog-center">
+          <Icon name="gear" size={18} className="spin" />
+          <p>{review.label}</p>
+        </div>
+      )}
+
+      {preview && (
+        <>
+          <div className="dialog-body">
+            <h3>
+              {preview.plugin.name}
+              {preview.plugin.version && <span className="muted"> {preview.plugin.version}</span>}
+            </h3>
+            {preview.plugin.description && <p className="hint">{preview.plugin.description}</p>}
+            {preview.replaces && <p className="status err">會取代已安裝的「{preview.replaces}」</p>}
+            <p className="hint">請確認下列內容。MCP 伺服器會在你的電腦上執行下面列出的指令；之後每次使用工具時，仍會依風險等級先問你。</p>
+            <PluginContents p={preview.plugin} preview />
+          </div>
+          <div className="dialog-actions">
+            {review.step === 'confirm' && review.error && <p className="status err">{review.error}</p>}
+            <button className="quiet" disabled={working} onClick={onClose}>
+              取消
+            </button>
+            <button className="primary" autoFocus disabled={working} onClick={onInstall}>
+              {review.step === 'installing' ? '安裝中…' : preview.replaces ? '取代並安裝' : '安裝'}
+            </button>
+          </div>
+        </>
+      )}
+
+      {review.step === 'done' && (
+        <>
+          <div className="dialog-body">
+            <h3>已安裝「{review.plugin.name}」</h3>
+            <p className="hint">
+              {missingSecrets > 0 ? `還需要填 ${missingSecrets} 個密鑰才能使用，到「已安裝」分頁設定。` : '現在就可以在對話裡使用了。'}
+            </p>
+          </div>
+          <div className="dialog-actions">
+            <button className={missingSecrets ? 'quiet' : 'primary'} autoFocus={!missingSecrets} onClick={onClose}>
+              繼續逛
+            </button>
+            <button className={missingSecrets ? 'primary' : ''} autoFocus={missingSecrets > 0} onClick={() => onShow(review.plugin.id)}>
+              {missingSecrets ? '去設定密鑰' : '查看外掛'}
+            </button>
+          </div>
+        </>
+      )}
+
+      {review.step === 'failed' && (
+        <>
+          <div className="dialog-body">
+            <h3>沒辦法安裝</h3>
+            <pre className="mcp-error">{review.error}</pre>
+          </div>
+          <div className="dialog-actions">
+            <button className="primary" autoFocus onClick={onClose}>
+              關閉
+            </button>
+          </div>
+        </>
+      )}
+    </dialog>
+  )
+}
+
 export function PluginsTab() {
   const [plugins, setPlugins] = useState<PluginView[]>([])
-  const [preview, setPreview] = useState<PluginPreview | null>(null)
+  const [review, setReview] = useState<Review | null>(null)
   const [gitUrl, setGitUrl] = useState('')
-  const [busy, setBusy] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState<string | null>(null)
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
   const [view, setView] = useState<'installed' | 'browse'>('installed')
@@ -136,32 +232,36 @@ export function PluginsTab() {
     return window.api.plugins.onChange(refresh)
   }, [])
 
+  const busy = !!review && review.step !== 'done' && review.step !== 'failed'
+
   const inspect = async (source: PluginSource, label: string) => {
-    setError(null)
-    setBusy(label)
+    setReview({ step: 'loading', label })
     try {
-      if (preview) await window.api.plugins.cancelInstall(preview.stagingId)
-      setPreview(await window.api.plugins.inspect(source))
+      const preview = await window.api.plugins.inspect(source)
+      // null: the user closed the file picker.
+      setReview(preview ? { step: 'confirm', preview } : null)
     } catch (e) {
-      setError(stripIpc(e))
-    } finally {
-      setBusy(null)
+      setReview({ step: 'failed', error: stripIpc(e) })
     }
   }
 
   const install = async () => {
-    if (!preview) return
-    setBusy('安裝中…')
+    if (review?.step !== 'confirm') return
+    const { preview } = review
+    setReview({ step: 'installing', preview })
     try {
-      setPlugins(await window.api.plugins.install(preview.stagingId))
-      setOpen(preview.plugin.id)
-      setPreview(null)
+      const list = await window.api.plugins.install(preview.stagingId)
+      setPlugins(list)
       setGitUrl('')
+      setReview({ step: 'done', plugin: list.find((p) => p.id === preview.plugin.id) ?? preview.plugin })
     } catch (e) {
-      setError(stripIpc(e))
-    } finally {
-      setBusy(null)
+      setReview({ step: 'confirm', preview, error: stripIpc(e) })
     }
+  }
+
+  const closeReview = () => {
+    if (review?.step === 'confirm') void window.api.plugins.cancelInstall(review.preview.stagingId)
+    setReview(null)
   }
 
   return (
@@ -182,11 +282,11 @@ export function PluginsTab() {
           外掛可以幫喵助加上技能（工作流程、公司知識）、MCP 伺服器與自訂工具，格式與 Claude Code 外掛相容。安裝前會先列出它會加入的所有東西讓你確認。
         </p>
         <div className="actions">
-          <button disabled={!!busy} onClick={() => inspect({ kind: 'folder' }, '讀取資料夾…')}>
+          <button disabled={busy} onClick={() => inspect({ kind: 'folder' }, '讀取資料夾…')}>
             <Icon name="folder" size={15} />
             從資料夾安裝
           </button>
-          <button disabled={!!busy} onClick={() => inspect({ kind: 'zip' }, '解壓縮中…')}>
+          <button disabled={busy} onClick={() => inspect({ kind: 'zip' }, '解壓縮中…')}>
             <Icon name="file" size={15} />
             從 zip 安裝
           </button>
@@ -199,46 +299,27 @@ export function PluginsTab() {
           }}
         >
           <input value={gitUrl} spellCheck={false} placeholder="或貼上 Git 網址，例如 https://github.com/xxx/plugin.git" onChange={(e) => setGitUrl(e.target.value)} />
-          <button type="submit" disabled={!!busy || !gitUrl.trim()}>
+          <button type="submit" disabled={busy || !gitUrl.trim()}>
             讀取
           </button>
         </form>
       </section>
       )}
 
-      {busy && <p className="hint">{busy}</p>}
-      {error && <p className="status err">{error}</p>}
-
-      {preview && (
-        <section className="plugin-review" aria-label="安裝前確認">
-          <h3>
-            {preview.plugin.name}
-            {preview.plugin.version && <span className="muted"> {preview.plugin.version}</span>}
-          </h3>
-          {preview.plugin.description && <p className="hint">{preview.plugin.description}</p>}
-          {preview.replaces && <p className="status err">會取代已安裝的「{preview.replaces}」</p>}
-          <p className="hint">
-            請確認下列內容。MCP 伺服器會在你的電腦上執行下面列出的指令；之後每次使用工具時，仍會依風險等級先問你。
-          </p>
-          <PluginContents p={preview.plugin} preview />
-          <div className="actions">
-            <button className="primary" disabled={!!busy} onClick={install}>
-              安裝
-            </button>
-            <button
-              className="quiet"
-              onClick={async () => {
-                await window.api.plugins.cancelInstall(preview.stagingId)
-                setPreview(null)
-              }}
-            >
-              取消
-            </button>
-          </div>
-        </section>
+      {review && (
+        <ReviewDialog
+          review={review}
+          onInstall={() => void install()}
+          onClose={closeReview}
+          onShow={(id) => {
+            setReview(null)
+            setView('installed')
+            setOpen(id)
+          }}
+        />
       )}
 
-      {view === 'browse' && <MarketplaceBrowser busy={!!busy} onInspect={(source, label) => void inspect(source, label)} />}
+      {view === 'browse' && <MarketplaceBrowser busy={busy} onInspect={(source, label) => void inspect(source, label)} />}
 
       {view === 'installed' && (
       <section>
