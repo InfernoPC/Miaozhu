@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install or update Miaozhu (喵助) on macOS:
-#   curl -fsSL https://raw.githubusercontent.com/InfernoPC/Miaozhu/main/scripts/install.sh | bash
+#   curl -fsSL https://github.com/InfernoPC/Miaozhu/releases/latest/download/install.sh | bash
 #
 # The app isn't signed with an Apple Developer certificate. Files downloaded with curl don't get
 # the "downloaded from the internet" quarantine flag, so Gatekeeper doesn't block the app; it's

@@ -76,7 +76,7 @@ irm https://github.com/InfernoPC/Miaozhu/releases/latest/download/install.ps1 | 
 
 The same line updates or reinstalls; settings and conversations are kept. The app also checks for updates every 6 hours and offers a one-click update (Settings → 關於).
 
-The builds are not signed with a paid certificate. The scripts download the release, check it against `SHA256SUMS`, and install per user: `~/Applications/Miaozhu.app` on macOS (ad-hoc signed), `%LOCALAPPDATA%\Programs\Miaozhu` on Windows. Downloading this way doesn't trigger the Gatekeeper / SmartScreen warnings that a browser download would. Read the scripts first if you like: [install.sh](scripts/install.sh), [install.ps1](scripts/install.ps1).
+The builds are not signed with a paid certificate. The scripts download the release, check it against `SHA256SUMS`, and install per user: `~/Applications/Miaozhu.app` on macOS (ad-hoc signed), `%LOCALAPPDATA%\Programs\desktop-agent` on Windows. Downloading this way doesn't trigger the Gatekeeper / SmartScreen warnings that a browser download would. Read the scripts first if you like: [install.sh](scripts/install.sh), [install.ps1](scripts/install.ps1).
 
 ## Getting started (development)
 

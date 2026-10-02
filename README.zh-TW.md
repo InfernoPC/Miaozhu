@@ -47,7 +47,7 @@ irm https://github.com/InfernoPC/Miaozhu/releases/latest/download/install.ps1 | 
 
 同一行指令也可以用來更新或重新安裝，設定和對話都會保留。喵助每 6 小時會自動檢查新版，有新版時貓咪會提醒，按一下就能更新（也可以在 設定 → 關於 手動檢查）。
 
-安裝檔沒有付費憑證簽章。安裝指令會下載正式版、比對 `SHA256SUMS` 檢查碼，再安裝到使用者自己的資料夾：macOS 是 `~/Applications/Miaozhu.app`，Windows 是 `%LOCALAPPDATA%\Programs\Miaozhu`。用指令下載不會跳出瀏覽器下載時的 Gatekeeper / SmartScreen 警告。想先看看指令做了什麼：[install.sh](scripts/install.sh)、[install.ps1](scripts/install.ps1)。
+安裝檔沒有付費憑證簽章。安裝指令會下載正式版、比對 `SHA256SUMS` 檢查碼，再安裝到使用者自己的資料夾：macOS 是 `~/Applications/Miaozhu.app`，Windows 是 `%LOCALAPPDATA%\Programs\desktop-agent`。用指令下載不會跳出瀏覽器下載時的 Gatekeeper / SmartScreen 警告。想先看看指令做了什麼：[install.sh](scripts/install.sh)、[install.ps1](scripts/install.ps1)。
 
 ## 開發環境
 

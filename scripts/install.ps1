@@ -1,5 +1,5 @@
 # Install or update Miaozhu on Windows (per user, no admin rights):
-#   irm https://raw.githubusercontent.com/InfernoPC/Miaozhu/main/scripts/install.ps1 | iex
+#   irm https://github.com/InfernoPC/Miaozhu/releases/latest/download/install.ps1 | iex
 #
 # Kept ASCII-only on purpose: Windows PowerShell 5.1 can mis-decode non-ASCII text in scripts
 # piped from the web. Files downloaded by PowerShell don't get the Mark of the Web, so the
@@ -37,7 +37,16 @@ Write-Host "Installing..."
 Start-Process -FilePath $setup -ArgumentList '/S' -Wait
 Remove-Item $setup -ErrorAction SilentlyContinue
 
-$exe = Join-Path $env:LOCALAPPDATA 'Programs\Miaozhu\Miaozhu.exe'
-if (-not (Test-Path $exe)) { throw "Installed, but Miaozhu.exe was not found at $exe" }
+# The installer records where it put the app; a one-click per-user install names the folder
+# after the package name, not the product name, so don't guess from the product name alone.
+$candidates = @()
+$keys = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
+Get-ItemProperty $keys -ErrorAction SilentlyContinue |
+  Where-Object { $_.DisplayName -like 'Miaozhu*' -and $_.InstallLocation } |
+  ForEach-Object { $candidates += (Join-Path $_.InstallLocation 'Miaozhu.exe') }
+$candidates += (Join-Path $env:LOCALAPPDATA 'Programs\desktop-agent\Miaozhu.exe')
+$candidates += (Join-Path $env:LOCALAPPDATA 'Programs\Miaozhu\Miaozhu.exe')
+$exe = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $exe) { throw "Installed, but Miaozhu.exe was not found. Looked in: $($candidates -join ', ')" }
 Write-Host "Miaozhu is installed: $exe"
 if ($env:MIAOZHU_NO_LAUNCH -ne '1') { Start-Process $exe }
