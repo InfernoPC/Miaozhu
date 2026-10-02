@@ -2,14 +2,35 @@ appId: app.miaozhu.desktop
 productName: Miaozhu
 directories:
   buildResources: build
+  output: dist
 files:
   - out/**/*
   - package.json
+# Stable file names, so "releases/latest/download/<name>" always points at the newest build.
 mac:
-  target: dmg
+  target:
+    - target: zip
+      arch: [arm64, x64]
   category: public.app-category.productivity
+  artifactName: Miaozhu-mac-${arch}.${ext}
+  # No Apple Developer certificate: ad-hoc sign so it runs on Apple Silicon. Hardened runtime
+  # would reject Electron's pre-signed frameworks under an ad-hoc signature, so it's off.
+  identity: '-'
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  extendInfo:
+    NSScreenCaptureUsageDescription: 喵助需要看螢幕，才能幫你看畫面上的內容。
 win:
-  target: nsis
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: Miaozhu-win-${arch}-setup.${ext}
+# Per-user, no admin rights, silent with /S (used by install.ps1 and updates).
 nsis:
-  oneClick: false
-  allowToChangeInstallationDirectory: true
+  oneClick: true
+  perMachine: false
+  allowElevation: false
+  runAfterFinish: false
+  createDesktopShortcut: false
+  createStartMenuShortcut: true
+publish: null
