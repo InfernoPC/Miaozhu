@@ -26,7 +26,11 @@ try {
   $line = ($sums -split "`n") | Where-Object { $_ -match [regex]::Escape($file) + '\s*$' } | Select-Object -First 1
   if ($line) {
     $expected = ($line -split '\s+')[0].ToLower()
-    $actual = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLower()
+    # .NET instead of Get-FileHash: that cmdlet goes missing when Windows PowerShell inherits
+    # PowerShell 7's PSModulePath (e.g. the app was started from a pwsh window).
+    $stream = [System.IO.File]::OpenRead($setup)
+    try { $bytes = [System.Security.Cryptography.SHA256]::Create().ComputeHash($stream) } finally { $stream.Dispose() }
+    $actual = -join ($bytes | ForEach-Object { $_.ToString('x2') })
     if ($expected -ne $actual) { throw "Checksum mismatch; the download may be incomplete. Please try again." }
   }
 } catch [System.Net.WebException] {

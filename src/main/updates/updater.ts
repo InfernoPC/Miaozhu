@@ -129,11 +129,15 @@ export class UpdateChecker {
 /** Starts the installer in the background; the caller quits the app right after. */
 export function launchInstaller(platform: NodeJS.Platform, exePath: string, base?: string): void {
   const { file, args, env } = installCommand(platform, exePath, base)
+  const childEnv: NodeJS.ProcessEnv = { ...process.env, ...env }
+  // Started from a PowerShell 7 window, the app carries pwsh's module path; Windows PowerShell
+  // would then load pwsh's modules and lose built-in cmdlets. Let it use its own default.
+  if (platform === 'win32') delete childEnv.PSModulePath
   const child = spawn(file, args, {
     detached: true,
     stdio: 'ignore',
     windowsHide: true,
-    env: { ...process.env, ...env }
+    env: childEnv
   })
   child.unref()
 }
