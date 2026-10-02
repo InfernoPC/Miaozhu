@@ -38,9 +38,13 @@ export function compareVersions(a: string, b: string): number {
  */
 export function installCommand(platform: NodeJS.Platform, exePath: string, base = RELEASES): { file: string; args: string[]; env: Record<string, string> } {
   if (platform === 'win32') {
+    // A detached child gets no console on Windows, and PowerShell without one never gets going
+    // (verified on a Windows runner). `start` gives it its own window, which also shows
+    // progress while the app is closed; on failure the error stays up until Enter.
+    const script = `try { irm ${base}/install.ps1 | iex } catch { Write-Host $_ -ForegroundColor Red; Read-Host 'Update failed. Press Enter to close' }`
     return {
-      file: 'powershell.exe',
-      args: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', `irm ${base}/install.ps1 | iex`],
+      file: 'cmd.exe',
+      args: ['/d', '/c', 'start', '""', 'powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', script],
       env: {}
     }
   }

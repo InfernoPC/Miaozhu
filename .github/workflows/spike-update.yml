@@ -8,10 +8,6 @@ on:
 jobs:
   windows:
     runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        variant: [current, hidden-window, cmd-start]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,13 +15,13 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - name: Spawn and quit
-        env:
-          VARIANT: ${{ matrix.variant }}
+      - name: Bundle the app's updater module
+        run: npx esbuild src/main/updates/updater.ts --bundle --platform=node --format=cjs --external:electron --outfile=spike/updater.cjs
+      - name: Start the update the way the app does, then quit
         run: npx electron spike/update-spawn-spike.cjs
-      - name: Did the child finish after the parent quit?
+      - name: Was Miaozhu installed after the app quit?
         shell: pwsh
         run: |
-          $m = Join-Path $env:TEMP "marker-${{ matrix.variant }}.txt"
-          for ($i = 0; $i -lt 30 -and -not (Test-Path $m); $i++) { Start-Sleep 2 }
-          if (Test-Path $m) { "RESULT ${{ matrix.variant }}: finished" } else { "RESULT ${{ matrix.variant }}: never finished"; Get-Process powershell -ErrorAction SilentlyContinue | Format-Table Id, StartTime }
+          $exe = Join-Path $env:LOCALAPPDATA 'Programs\desktop-agent\Miaozhu.exe'
+          for ($i = 0; $i -lt 90 -and -not (Test-Path $exe); $i++) { Start-Sleep 2 }
+          if (Test-Path $exe) { Write-Output "RESULT: installed $((Get-Item $exe).VersionInfo.ProductVersion)" } else { Write-Output 'RESULT: not installed'; exit 1 }
