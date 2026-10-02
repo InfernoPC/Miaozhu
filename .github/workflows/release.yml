@@ -1,0 +1,98 @@
+name: Release
+
+# Push a tag like v0.2.0 (make release VERSION=0.2.0) to build and publish.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: 24
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Tag matches package.json
+        run: |
+          want="${GITHUB_REF_NAME#v}"
+          have="$(node -p "require('./package.json').version")"
+          [ "$want" = "$have" ] || { echo "::error::tag $GITHUB_REF_NAME but package.json is $have"; exit 1; }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  mac:
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npx electron-vite build
+      # No certificate: electron-builder signs ad-hoc (identity "-" in electron-builder.yml).
+      - run: npx electron-builder --mac --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac
+          path: dist/Miaozhu-mac-*.zip
+          if-no-files-found: error
+
+  windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npx electron-vite build
+      - run: npx electron-builder --win --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/Miaozhu-win-*-setup.exe
+          if-no-files-found: error
+
+  publish:
+    needs: [mac, windows]
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+      # Draft first, so "latest" never points at a release with missing files.
+      - name: Create draft release
+        run: gh release create "$TAG" --draft --title "喵助 $TAG" --generate-notes --verify-tag
+      - name: Add install scripts, latest.json and checksums
+        run: |
+          cp scripts/install.sh scripts/install.ps1 release/
+          notes="$(gh release view "$TAG" --json body --jq .body)"
+          url="https://github.com/${GITHUB_REPOSITORY}/releases/tag/$TAG"
+          jq -n --arg v "${TAG#v}" --arg n "$notes" --arg u "$url" --arg d "$(date -u +%FT%TZ)" \
+            '{version: $v, notes: $n, url: $u, date: $d}' > release/latest.json
+          (cd release && sha256sum Miaozhu-* > SHA256SUMS && cat SHA256SUMS)
+          gh release upload "$TAG" release/*
+      - name: Publish
+        run: gh release edit "$TAG" --draft=false --latest
