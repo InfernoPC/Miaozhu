@@ -15,10 +15,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx vitest run tests/remove.test.ts
-      - name: Whole suite on Windows (informational)
-        continue-on-error: true
-        run: npx vitest run
+      - run: npx vitest run
 
   update:
     runs-on: windows-latest
