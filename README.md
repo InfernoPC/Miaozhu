@@ -60,7 +60,25 @@ It connects to any OpenAI-compatible API, can use tools on your computer (files,
 - The conversation is saved locally and restored after a restart (images are not saved). Permission grants are not restored.
 - File and web content is treated as data, not instructions, in the system prompt.
 
-## Getting started
+## Install
+
+**macOS** (Apple Silicon or Intel), in Terminal:
+
+```bash
+curl -fsSL https://github.com/InfernoPC/Miaozhu/releases/latest/download/install.sh | bash
+```
+
+**Windows**, in PowerShell (no admin rights needed):
+
+```powershell
+irm https://github.com/InfernoPC/Miaozhu/releases/latest/download/install.ps1 | iex
+```
+
+The same line updates or reinstalls; settings and conversations are kept. The app also checks for updates every 6 hours and offers a one-click update (Settings → 關於).
+
+The builds are not signed with a paid certificate. The scripts download the release, check it against `SHA256SUMS`, and install per user: `~/Applications/Miaozhu.app` on macOS (ad-hoc signed), `%LOCALAPPDATA%\Programs\Miaozhu` on Windows. Downloading this way doesn't trigger the Gatekeeper / SmartScreen warnings that a browser download would. Read the scripts first if you like: [install.sh](scripts/install.sh), [install.ps1](scripts/install.ps1).
+
+## Getting started (development)
 
 Requires Node.js 20 or later.
 
@@ -97,7 +115,7 @@ This builds and launches Electron on its own, so you only need to allow "Electro
 | Double-click | Open the chat window |
 | Drag | Move the cat |
 | Drop files or folders on it | Attach them, with quick-action buttons |
-| Right-click | Menu: chat, switch model, switch skin, do-not-disturb, new conversation, settings, quit |
+| Right-click | Menu: chat, switch model, switch skin, do-not-disturb, new conversation, update (when available), settings, quit |
 
 ## Scripts
 
@@ -109,6 +127,14 @@ This builds and launches Electron on its own, so you only need to allow "Electro
 | `npm run typecheck` | Type-check main, renderer and tests |
 | `npm run build` | Build to `out/` |
 | `npm run dist:mac` / `npm run dist:win` | Build installers (unsigned) |
+
+### Releasing
+
+```bash
+make release VERSION=0.3.0
+```
+
+This bumps `package.json`, tags `v0.3.0` and pushes. GitHub Actions ([release.yml](.github/workflows/release.yml)) runs the tests, builds the macOS zips and the Windows installer, and publishes them with the install scripts, `latest.json` (read by the update check) and `SHA256SUMS`. Run `make help` for the other targets.
 
 ## Project layout
 
@@ -137,7 +163,7 @@ tests/                    # Vitest: permissions, tools, agent loop, providers, s
 
 See [DESIGN.md](DESIGN.md) (Traditional Chinese). Next up:
 
-- **M5**: signed installers, auto-update, audit log viewer, a company plugin catalog, Windows testing
+- **M5**: one-line install and in-app update (done), audit log viewer, a company plugin catalog, Windows testing
 
 ## Credits
 

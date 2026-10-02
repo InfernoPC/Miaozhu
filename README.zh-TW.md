@@ -31,6 +31,24 @@
 - 每次操作都記錄在本機操作紀錄（設定 → 檔案權限 → 操作紀錄）
 - 對話會存在本機，重開 App 後自動恢復（圖片不保存）；「這次對話都允許」的授權不會恢復
 
+## 安裝
+
+**macOS**（Apple 晶片或 Intel 都可以），打開「終端機」貼上：
+
+```bash
+curl -fsSL https://github.com/InfernoPC/Miaozhu/releases/latest/download/install.sh | bash
+```
+
+**Windows**，打開 PowerShell 貼上（不需要系統管理員權限）：
+
+```powershell
+irm https://github.com/InfernoPC/Miaozhu/releases/latest/download/install.ps1 | iex
+```
+
+同一行指令也可以用來更新或重新安裝，設定和對話都會保留。喵助每 6 小時會自動檢查新版，有新版時貓咪會提醒，按一下就能更新（也可以在 設定 → 關於 手動檢查）。
+
+安裝檔沒有付費憑證簽章。安裝指令會下載正式版、比對 `SHA256SUMS` 檢查碼，再安裝到使用者自己的資料夾：macOS 是 `~/Applications/Miaozhu.app`，Windows 是 `%LOCALAPPDATA%\Programs\Miaozhu`。用指令下載不會跳出瀏覽器下載時的 Gatekeeper / SmartScreen 警告。想先看看指令做了什麼：[install.sh](scripts/install.sh)、[install.ps1](scripts/install.ps1)。
+
 ## 開發環境
 
 需要 Node.js 20 以上。
@@ -65,7 +83,7 @@ API Key 以作業系統鑰匙圈加密（macOS Keychain / Windows DPAPI），只
 | 雙擊貓咪 | 開啟完整對話視窗 |
 | 拖曳貓咪 | 移動位置 |
 | 把檔案或資料夾拖到貓咪身上 | 附加檔案，並提供「摘要重點」「翻譯」等快捷按鈕 |
-| 右鍵貓咪 | 選單：對話視窗、切換模型連線、切換造型、清除對話、設定、結束 |
+| 右鍵貓咪 | 選單：對話視窗、切換模型連線、切換造型、勿擾模式、新對話、更新（有新版時）、設定、結束 |
 
 ## 指令
 
@@ -77,6 +95,14 @@ API Key 以作業系統鑰匙圈加密（macOS Keychain / Windows DPAPI），只
 | `npm run typecheck` | 型別檢查 |
 | `npm run build` | 編譯到 `out/` |
 | `npm run dist:mac` / `npm run dist:win` | 產生安裝檔（尚未簽章） |
+
+### 發佈新版
+
+```bash
+make release VERSION=0.3.0
+```
+
+會更新 `package.json` 版本、打上 `v0.3.0` 標籤並推送。GitHub Actions（[release.yml](.github/workflows/release.yml)）接著跑測試、打包 macOS 與 Windows 安裝檔，連同安裝指令、`latest.json`（給更新檢查用）和 `SHA256SUMS` 一起發佈。其他指令可用 `make help` 查看。
 
 ## 專案結構
 
