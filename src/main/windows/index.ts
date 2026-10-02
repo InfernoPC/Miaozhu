@@ -1,4 +1,4 @@
-import { BrowserWindow, screen, shell } from 'electron'
+import { BrowserWindow, powerMonitor, screen, shell } from 'electron'
 import { join } from 'node:path'
 import type { HitRect } from '@shared/types'
 
@@ -7,6 +7,7 @@ type Route = 'pet' | 'chat' | 'settings' | 'snip'
 // Tall enough for a reply balloon plus the input box above the cat; the empty part is transparent and click-through.
 const PET_SIZE = { width: 340, height: 520 }
 const HIT_TEST_INTERVAL_MS = 50
+const REASSERT_TOP_MS = 15_000
 
 function load(win: BrowserWindow, route: Route): void {
   const devUrl = process.env['ELECTRON_RENDERER_URL']
@@ -35,6 +36,32 @@ function externalLinks(win: BrowserWindow): void {
     ev.preventDefault()
     if (/^https?:\/\//.test(url)) void shell.openExternal(url)
   })
+}
+
+/**
+ * Windows sometimes drops a window's topmost flag — after the screen locks or the PC sleeps,
+ * or when another always-on-top app takes over — while Electron still believes it is set, so
+ * the cat ends up behind other windows. Put it back now and then; this only changes the
+ * stacking order and never takes keyboard focus. Returns a function that stops it.
+ */
+function keepOnTop(win: BrowserWindow): () => void {
+  if (process.platform !== 'win32') return () => {}
+  const reassert = () => {
+    if (win.isDestroyed() || !win.isVisible()) return
+    win.setAlwaysOnTop(false)
+    win.setAlwaysOnTop(true, 'screen-saver')
+    win.moveTop()
+  }
+  const timer = setInterval(reassert, REASSERT_TOP_MS)
+  powerMonitor.on('resume', reassert)
+  powerMonitor.on('unlock-screen', reassert)
+  screen.on('display-metrics-changed', reassert)
+  return () => {
+    clearInterval(timer)
+    powerMonitor.removeListener('resume', reassert)
+    powerMonitor.removeListener('unlock-screen', reassert)
+    screen.removeListener('display-metrics-changed', reassert)
+  }
 }
 
 export class WindowManager {
@@ -66,6 +93,7 @@ export class WindowManager {
     // Stay above full-screen apps on macOS as well.
     win.setAlwaysOnTop(true, 'floating')
     win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+    const stopKeepingOnTop = keepOnTop(win)
     // Transparent areas let clicks through. Hit-testing polls the cursor from main instead of
     // relying on forwarded mousemove events, because those don't arrive during an OS file drag —
     // and dropping files onto the cat is a core interaction.
@@ -75,6 +103,7 @@ export class WindowManager {
     externalLinks(win)
     load(win, 'pet')
     win.on('closed', () => {
+      stopKeepingOnTop()
       if (this.hitTimer) clearInterval(this.hitTimer)
       this.pet = null
     })

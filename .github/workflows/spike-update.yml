@@ -6,7 +6,21 @@ on:
   workflow_dispatch:
 
 jobs:
-  windows:
+  tests:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run tests/remove.test.ts
+      - name: Whole suite on Windows (informational)
+        continue-on-error: true
+        run: npx vitest run
+
+  update:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,5 +37,8 @@ jobs:
         shell: pwsh
         run: |
           $exe = Join-Path $env:LOCALAPPDATA 'Programs\desktop-agent\Miaozhu.exe'
-          for ($i = 0; $i -lt 90 -and -not (Test-Path $exe); $i++) { Start-Sleep 2 }
+          for ($i = 0; $i -lt 150 -and -not (Test-Path $exe); $i++) { Start-Sleep 2 }
+          $log = Join-Path $env:TEMP 'miaozhu-install.log'
+          if (Test-Path $log) { Get-Content $log | Select-Object -Last 40 } else { Write-Output 'no install log' }
+          Get-Process powershell, Miaozhu* -ErrorAction SilentlyContinue | Format-Table Id, ProcessName, StartTime
           if (Test-Path $exe) { Write-Output "RESULT: installed $((Get-Item $exe).VersionInfo.ProductVersion)" } else { Write-Output 'RESULT: not installed'; exit 1 }

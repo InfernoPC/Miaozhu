@@ -6,7 +6,8 @@ const { launchInstaller } = require('./updater.cjs')
 
 app.whenReady().then(() => {
   process.env.MIAOZHU_NO_LAUNCH = '1'
-  launchInstaller('win32', 'C:\\\\unused\\\\Miaozhu.exe')
+  // install.ps1 from this branch (it writes a log); the installer itself from the latest release.
+  launchInstaller('win32', 'C:\\unused\\Miaozhu.exe', 'https://raw.githubusercontent.com/InfernoPC/Miaozhu/fix/windows-update/scripts')
   console.log('installer launched; quitting')
   setTimeout(() => app.quit(), 500)
 })

@@ -1,11 +1,12 @@
 import { app } from 'electron'
 import { randomUUID } from 'node:crypto'
-import { cpSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readdirSync, renameSync, writeFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import type { PluginPreview, PluginView } from '@shared/types'
 import type { ToolDef } from '../tools/types'
 import { isInside } from '../tools/paths'
 import { readJson, writeJson } from '../util/json-file'
+import { removeDir } from '../util/remove'
 import { run } from '../util/run'
 import { declaredTool } from './declared-tools'
 import { looksLikePlugin, readPlugin, type LoadedPlugin } from './manifest'
@@ -63,7 +64,12 @@ export class PluginManager {
   /** Reads installed plugins and starts MCP servers for the enabled ones. */
   async start(): Promise<void> {
     mkdirSync(pluginsDir(), { recursive: true })
-    rmSync(stagingDir(), { recursive: true, force: true })
+    try {
+      removeDir(stagingDir())
+    } catch (err) {
+      // Leftovers from an unfinished install must never stop installed plugins from loading.
+      console.warn('Could not clear plugin staging:', (err as Error).message)
+    }
     this.plugins = readdirSync(pluginsDir(), { withFileTypes: true })
       .filter((e) => e.isDirectory())
       .map((e) => readPlugin(join(pluginsDir(), e.name), e.name))
@@ -207,7 +213,7 @@ export class PluginManager {
         movedSecrets: secrets && Object.keys(secrets).length ? Object.keys(secrets) : undefined
       }
     } catch (e) {
-      rmSync(dir, { recursive: true, force: true })
+      removeDir(dir)
       throw e
     }
   }
@@ -215,7 +221,7 @@ export class PluginManager {
   cancelInstall(stagingId: string): void {
     const s = this.staged.get(stagingId)
     this.staged.delete(stagingId)
-    if (s) rmSync(s.dir, { recursive: true, force: true })
+    if (s) removeDir(s.dir)
   }
 
   async install(stagingId: string): Promise<PluginView[]> {
@@ -224,12 +230,12 @@ export class PluginManager {
     this.staged.delete(stagingId)
     const target = join(pluginsDir(), s.plugin.id)
     await this.stopPlugin(s.plugin.id)
-    rmSync(target, { recursive: true, force: true })
+    removeDir(target)
     mkdirSync(pluginsDir(), { recursive: true })
     // A relative-path plugin lives inside the marketplace cache, outside staging: copy, don't move.
     if (isInside(s.root, s.dir)) renameSync(s.root, target)
     else cpSync(s.root, target, { recursive: true, filter: (src) => !/[\\/]\.git([\\/]|$)/.test(src) })
-    rmSync(s.dir, { recursive: true, force: true })
+    removeDir(s.dir)
 
     for (const [name, value] of Object.entries(s.secrets ?? {})) this.vault.set(secretKey(s.plugin.id, name), value)
     const installed = readPlugin(target, s.plugin.id)
@@ -259,7 +265,7 @@ export class PluginManager {
     const p = this.plugins.find((x) => x.id === id)
     await this.stopPlugin(id)
     if (p) {
-      rmSync(p.dir, { recursive: true, force: true })
+      removeDir(p.dir)
       for (const name of p.secretNames) this.vault.set(secretKey(id, name), '')
     }
     this.plugins = this.plugins.filter((x) => x.id !== id)

@@ -1,10 +1,11 @@
 import { app } from 'electron'
 import { randomUUID } from 'node:crypto'
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, statSync } from 'node:fs'
 import { basename, extname, join } from 'node:path'
 import { PET_SKINS, PET_STATES, type LoadedSkin, type PetState, type SkinView } from '@shared/types'
 import { isInside } from '../tools/paths'
 import { run } from '../util/run'
+import { removeDir } from '../util/remove'
 
 const MAX_FILE_BYTES = 5 * 1024 ** 2
 const IMAGE_TYPES: Record<string, string> = {
@@ -128,16 +129,16 @@ export class SkinPackManager {
       const m = readSkinPack(root)
       const id = idOf(m.name)
       mkdirSync(skinsDir(), { recursive: true })
-      rmSync(join(skinsDir(), id), { recursive: true, force: true })
+      removeDir(join(skinsDir(), id))
       renameSync(root, join(skinsDir(), id))
       return id
     } finally {
-      rmSync(stage, { recursive: true, force: true })
+      removeDir(stage)
     }
   }
 
   remove(id: string): void {
     if (BUILTIN_IDS.has(id) || !/^[a-z0-9._-]+$/.test(id)) return
-    rmSync(join(skinsDir(), id), { recursive: true, force: true })
+    removeDir(join(skinsDir(), id))
   }
 }

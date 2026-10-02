@@ -8,6 +8,9 @@
 # Environment overrides: MIAOZHU_BASE_URL, MIAOZHU_NO_LAUNCH=1
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'   # the progress bar makes Invoke-WebRequest very slow
+# A log for when something goes wrong, especially in an update started from the app.
+$log = Join-Path $env:TEMP 'miaozhu-install.log'
+try { Start-Transcript -Path $log -Force | Out-Null } catch { }
 
 $repo = 'InfernoPC/Miaozhu'
 $base = if ($env:MIAOZHU_BASE_URL) { $env:MIAOZHU_BASE_URL } else { "https://github.com/$repo/releases/latest/download" }
@@ -50,3 +53,4 @@ $exe = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $exe) { throw "Installed, but Miaozhu.exe was not found. Looked in: $($candidates -join ', ')" }
 Write-Host "Miaozhu is installed: $exe"
 if ($env:MIAOZHU_NO_LAUNCH -ne '1') { Start-Process $exe }
+try { Stop-Transcript | Out-Null } catch { }
