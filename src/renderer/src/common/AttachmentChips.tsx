@@ -24,3 +24,17 @@ export function AttachmentChips({ items, onRemove }: { items: AttachmentView[]; 
 export function droppedPaths(ev: React.DragEvent): string[] {
   return [...ev.dataTransfer.files].map((f) => window.api.files.pathOf(f)).filter(Boolean)
 }
+
+/**
+ * Files or a screenshot pasted into an input (⌘V / Ctrl+V). Returns null for an ordinary
+ * text paste, which is left to the input; copied text wins over the image some apps add.
+ */
+export function pastedAttachments(ev: React.ClipboardEvent): Promise<AttachmentView[]> | null {
+  const files = [...ev.clipboardData.files]
+  if (!files.length) return null
+  const paths = files.map((f) => window.api.files.pathOf(f)).filter(Boolean)
+  if (!paths.length && ev.clipboardData.getData('text/plain').trim()) return null
+  ev.preventDefault()
+  if (paths.length) return window.api.agent.describeAttachments(paths)
+  return window.api.capture.pasteImage().then((a) => (a ? [a] : []))
+}

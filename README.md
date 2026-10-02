@@ -14,6 +14,7 @@ It connects to any OpenAI-compatible API, can use tools on your computer (files,
 - Click the cat to type a question; the reply appears in a speech balloon above it.
 - Double-click for a full chat window with Markdown rendering.
 - Drag files or folders onto the cat to attach them, with quick actions like "summarize" or "translate".
+- Show it your screen: the camera button in the chat window (or "截圖問喵助" on the cat's right-click menu) takes a screenshot of a region, a window (macOS) or the whole screen and attaches it. Pasting an image (⌘V / Ctrl+V) works too.
 - Give it your own persona (name, personality, speaking style) in Settings → 角色. Language, honesty, permission and safety rules stay fixed underneath and can't be overridden by the persona.
 - Conversations are kept in a list: start a new one, reopen, rename or delete old ones.
 - Reminders: "remind me at 3 pm" or "every weekday at 9" — the cat jumps up on time, with snooze. Do-not-disturb and quiet hours hold reminders until they end.
@@ -47,6 +48,7 @@ It connects to any OpenAI-compatible API, can use tools on your computer (files,
 **Plugins** (Settings → 外掛)
 - Compatible with Claude Code plugins: `SKILL.md` skills, MCP servers (`.mcp.json`, stdio or HTTP), plus tools declared in YAML (HTTP or CLI) with no code.
 - Browse multiple marketplaces in the Claude Code `marketplace.json` format. Anthropic's official marketplace is added by default; add your team's with `owner/repo`, a Git URL, a link to `marketplace.json` or a local folder. Installed plugins show when an update is available. Sort by name or by popularity when the marketplace publishes install counts in entry `metadata`.
+- Add MCP servers without a plugin: paste a config from Claude Desktop, Claude Code, VS Code or a server's README, or fill in a form. Tokens and API keys in it move to the keychain.
 - Or install directly from a folder, a zip file or a Git URL. Either way, before anything runs you see every skill, the exact MCP command lines and each tool's risk level.
 - Plugin parts that only work inside Claude Code (slash commands, subagents, hooks) are flagged in the review.
 - Skills are listed to the model by name and description only and loaded when needed. MCP tool calls ask first.

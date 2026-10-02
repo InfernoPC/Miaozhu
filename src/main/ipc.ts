@@ -7,6 +7,8 @@ import {
   type SavedPlace,
   type SaveProfileInput,
   type SaveSearchInput,
+  type AttachmentView,
+  type CaptureMode,
   type TestResult
 } from '@shared/types'
 import type { Agent } from './agent/agent'
@@ -20,6 +22,7 @@ import type { ReminderService } from './reminders/service'
 import type { ConversationStore } from './agent/conversation-store'
 import type { SkinPackManager } from './skins/skin-packs'
 import type { SettingsStore } from './settings/store'
+import { saveClipboardImage, takeScreenshot } from './capture'
 import { launchInstaller, type UpdateChecker } from './updates/updater'
 import { searchWeb } from './tools/web'
 import type { WindowManager } from './windows'
@@ -89,6 +92,22 @@ export function registerIpc(
     launchInstaller(process.platform, app.getPath('exe'))
     // Give the child a moment to detach before this process goes away.
     setTimeout(() => app.quit(), 500)
+  }
+  const capture = async (mode: CaptureMode): Promise<AttachmentView | null> => {
+    const path = await takeScreenshot(mode, windows)
+    return path ? (await agent.describeAttachments([path]))[0] : null
+  }
+  /** From the pet's menu: the result goes to the pet's input box. */
+  const captureForPet = async (mode: CaptureMode) => {
+    try {
+      const attachment = await capture(mode)
+      if (!attachment) return
+      // Keyboard focus for the input box: after the picker, focus is back in the other app.
+      windows.pet?.focus()
+      windows.pet?.webContents.send('capture:attached', { attachment })
+    } catch (err) {
+      windows.pet?.webContents.send('capture:attached', { error: (err as Error).message })
+    }
   }
   const selectSkin = (id: string) => {
     settings.setPetSkin(id)
@@ -273,6 +292,13 @@ export function registerIpc(
           { label: '管理造型…', click: () => windows.openSettings() }
         ]
       },
+      {
+        label: '截圖問喵助',
+        submenu: [
+          { label: process.platform === 'darwin' ? '框選範圍或視窗' : '框選範圍', click: () => void captureForPet('region') },
+          { label: '整個螢幕', click: () => void captureForPet('full') }
+        ]
+      },
       dndMenu(reminders),
       { label: '新對話', click: () => agent.newConversation() },
       ...(updates.get().available ? [{ label: `更新到 ${updates.get().latest}…`, click: () => installUpdate() }] : []),
@@ -281,6 +307,29 @@ export function registerIpc(
       { type: 'separator' },
       { label: '結束', click: () => app.quit() }
     ]).popup({ window: BrowserWindow.fromWebContents(e.sender) ?? undefined })
+  })
+
+  ipcMain.handle('capture:take', (_e, mode: CaptureMode) => capture(mode === 'full' ? 'full' : 'region'))
+  ipcMain.handle('capture:choose', (e) => {
+    return new Promise<AttachmentView | null>((resolve, reject) => {
+      let picked = false
+      const take = (mode: CaptureMode) => {
+        picked = true
+        capture(mode).then(resolve, reject)
+      }
+      Menu.buildFromTemplate([
+        { label: process.platform === 'darwin' ? '框選範圍或視窗' : '框選範圍', click: () => take('region') },
+        { label: '整個螢幕', click: () => take('full') }
+      ]).popup({
+        window: BrowserWindow.fromWebContents(e.sender) ?? undefined,
+        // Runs after a click handler too; only an empty close means "cancelled".
+        callback: () => setTimeout(() => !picked && resolve(null), 0)
+      })
+    })
+  })
+  ipcMain.handle('capture:paste', async () => {
+    const path = await saveClipboardImage()
+    return path ? (await agent.describeAttachments([path]))[0] : null
   })
 
   ipcMain.handle('updates:status', () => updates.get())

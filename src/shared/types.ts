@@ -327,6 +327,9 @@ export interface HitRect {
 }
 
 /** The API exposed on window.api by the preload script. */
+/** A screenshot the user takes: drag a region (or pick a window on macOS), or the whole screen. */
+export type CaptureMode = 'region' | 'full'
+
 /** Result of checking GitHub Releases for a newer build. */
 export interface UpdateStatus {
   current: string
@@ -433,6 +436,21 @@ export interface DesktopApi {
     dragEnd(): void
     showMenu(): void
     onSkinChange(cb: (skin: PetSkinId) => void): () => void
+  }
+  capture: {
+    /** Takes a screenshot and returns it ready to attach; null when cancelled. */
+    take(mode: CaptureMode): Promise<AttachmentView | null>
+    /** Shows a small menu (region / full screen) at the cursor, then takes that screenshot. */
+    choose(): Promise<AttachmentView | null>
+    /** Saves an image from the clipboard for attaching; null when there is none. */
+    pasteImage(): Promise<AttachmentView | null>
+    /** Screenshots started from the pet's menu arrive here. */
+    onAttached(cb: (result: { attachment?: AttachmentView; error?: string }) => void): () => void
+  }
+  /** The region-picking overlay. */
+  snip: {
+    onImage(cb: (dataUrl: string) => void): () => void
+    done(rect: { x: number; y: number; width: number; height: number } | null): void
   }
   updates: {
     status(): Promise<UpdateStatus>

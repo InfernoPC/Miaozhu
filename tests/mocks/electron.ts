@@ -49,20 +49,37 @@ function fakeImage(width: number, height: number, empty = false) {
     getSize: () => ({ width, height }),
     resize: ({ width: w, height: h }: { width: number; height: number }) => fakeImage(w, h),
     toJPEG: () => Buffer.from(`jpeg ${width}x${height}`),
-    toPNG: () => Buffer.from(`png ${width}x${height}`)
+    toPNG: () => Buffer.from(`png ${width}x${height}`),
+    crop: ({ width: w, height: h }: { width: number; height: number }) => fakeImage(w, h)
   }
   return img
 }
 
 export const nativeImage = {
+  createFromBuffer: (b: Buffer) => ({ toPNG: () => Buffer.from(`png from ${b.toString()}`) }),
   createFromPath: (p: string) => (existsSync(p) && IMAGE_EXTS.has(extname(p).toLowerCase()) ? fakeImage(2400, 1600) : fakeImage(0, 0, true))
 }
 
 export const systemPreferences = { getMediaAccessStatus: () => 'granted' }
 export const screen = {
+  getCursorScreenPoint: () => ({ x: 10, y: 10 }),
+  getDisplayNearestPoint: () => ({ id: 1, bounds: { x: 0, y: 0, width: 1440, height: 900 }, size: { width: 1440, height: 900 }, scaleFactor: 2 }),
   getAllDisplays: () => [{ id: 1, size: { width: 1440, height: 900 }, scaleFactor: 2 }],
   getPrimaryDisplay: () => ({ id: 1, size: { width: 1440, height: 900 }, scaleFactor: 2 })
 }
 export const desktopCapturer = {
   getSources: async () => [{ display_id: '1', thumbnail: fakeImage(2880, 1800) }]
 }
+
+/** Clipboard items for a test to set: [{ mime: content }]. */
+export const clipboard = {
+  items: [] as Record<string, string>[],
+  async read() {
+    return clipboard.items.map((item) => ({
+      types: Object.keys(item),
+      getType: async (t: string) => new Blob([item[t]])
+    }))
+  }
+}
+
+export const ipcMain = { on() {}, removeListener() {}, handle() {} }

@@ -15,7 +15,7 @@ function permissionHelp(): string {
 
 let openedSettings = false
 
-function missingPermission(): never {
+export function missingPermission(): never {
   // Take the user straight to the right pane, once per run, instead of describing where it is.
   if (!openedSettings) {
     openedSettings = true

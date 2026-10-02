@@ -2,6 +2,7 @@ import { app, Notification } from 'electron'
 import type { AgentEvent } from '@shared/types'
 import { Agent } from './agent/agent'
 import { ConversationStore } from './agent/conversation-store'
+import { cleanOldScreenshots } from './capture'
 import { registerIpc } from './ipc'
 import { PluginManager } from './plugins/manager'
 import { MarketplaceManager } from './plugins/marketplaces'
@@ -59,6 +60,7 @@ app.whenReady().then(async () => {
   registerIpc(agent, settings, windows, plugins, marketplaces, reminders, conversations, new SkinPackManager(), updates)
   reminders.start()
   updates.start()
+  cleanOldScreenshots()
   void plugins.start()
   app.on('before-quit', () => {
     reminders.stop()

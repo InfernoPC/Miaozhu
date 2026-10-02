@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { AgentEvent, DesktopApi, DueReminder, PetSkinId, UpdateStatus } from '@shared/types'
+import type { AgentEvent, AttachmentView, DesktopApi, DueReminder, PetSkinId, UpdateStatus } from '@shared/types'
 
 const api: DesktopApi = {
   agent: {
@@ -99,6 +99,24 @@ const api: DesktopApi = {
       ipcRenderer.on('pet:skin', listener)
       return () => ipcRenderer.removeListener('pet:skin', listener)
     }
+  },
+  capture: {
+    take: (mode) => ipcRenderer.invoke('capture:take', mode),
+    choose: () => ipcRenderer.invoke('capture:choose'),
+    pasteImage: () => ipcRenderer.invoke('capture:paste'),
+    onAttached: (cb) => {
+      const listener = (_e: Electron.IpcRendererEvent, r: { attachment?: AttachmentView; error?: string }) => cb(r)
+      ipcRenderer.on('capture:attached', listener)
+      return () => ipcRenderer.removeListener('capture:attached', listener)
+    }
+  },
+  snip: {
+    onImage: (cb) => {
+      const listener = (_e: Electron.IpcRendererEvent, url: string) => cb(url)
+      ipcRenderer.on('snip:image', listener)
+      return () => ipcRenderer.removeListener('snip:image', listener)
+    },
+    done: (rect) => ipcRenderer.send('snip:done', rect)
   },
   updates: {
     status: () => ipcRenderer.invoke('updates:status'),

@@ -2,7 +2,7 @@ import { BrowserWindow, screen, shell } from 'electron'
 import { join } from 'node:path'
 import type { HitRect } from '@shared/types'
 
-type Route = 'pet' | 'chat' | 'settings'
+type Route = 'pet' | 'chat' | 'settings' | 'snip'
 
 // Tall enough for a reply balloon plus the input box above the cat; the empty part is transparent and click-through.
 const PET_SIZE = { width: 340, height: 520 }
@@ -109,6 +109,41 @@ export class WindowManager {
     return () => {
       if (!pet.isDestroyed()) pet.setOpacity(1)
     }
+  }
+
+  /**
+   * Gets every app window out of the way for a screenshot the user takes; returns a function
+   * that brings them back as they were.
+   */
+  async hideForCapture(): Promise<() => void> {
+    const showPet = await this.hidePet()
+    const hidden = [this.chat, this.settings].filter((w): w is BrowserWindow => !!w && !w.isDestroyed() && w.isVisible())
+    for (const w of hidden) w.hide()
+    if (hidden.length) await new Promise((r) => setTimeout(r, 200))
+    return () => {
+      showPet()
+      for (const w of hidden) if (!w.isDestroyed()) w.show()
+    }
+  }
+
+  /** Full-screen overlay for picking a region (Windows; macOS uses its own picker). */
+  openSnip(bounds: Electron.Rectangle): BrowserWindow {
+    const win = new BrowserWindow({
+      ...bounds,
+      frame: false,
+      resizable: false,
+      movable: false,
+      fullscreenable: false,
+      skipTaskbar: true,
+      alwaysOnTop: true,
+      hasShadow: false,
+      enableLargerThanScreen: true,
+      show: false,
+      webPreferences: baseWebPreferences()
+    })
+    win.setAlwaysOnTop(true, 'screen-saver')
+    load(win, 'snip')
+    return win
   }
 
   openChat(): void {

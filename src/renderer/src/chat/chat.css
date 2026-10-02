@@ -97,3 +97,6 @@
 .conv-edit, .conv-confirm { flex: 1; display: flex; align-items: center; gap: 4px; padding: 4px 6px; }
 .conv-confirm span { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .conv-empty { padding: 12px; }
+.chat-input .capture-btn { padding: 8px 9px; color: var(--graphite); }
+.chat-input .capture-btn:hover { color: var(--ink); }
+.capture-error { margin: 0; font-size: 12.5px; color: var(--danger); }

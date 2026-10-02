@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AttachmentView, ChatMessage, MessagePart, PermissionRequest } from '@shared/types'
-import { AttachmentChips, droppedPaths } from '../common/AttachmentChips'
+import { AttachmentChips, droppedPaths, pastedAttachments } from '../common/AttachmentChips'
 import { CatMark, Icon } from '../common/Icon'
 import { Markdown } from '../common/Markdown'
 import { PermissionPrompt } from '../common/PermissionPrompt'
@@ -52,6 +52,7 @@ export function Chat() {
   const [dragOver, setDragOver] = useState(false)
   const [drawer, setDrawer] = useState(false)
   const [conversationId, setConversationId] = useState('')
+  const [captureError, setCaptureError] = useState<string | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -95,6 +96,18 @@ export function Chat() {
     setDraft('')
     setAttachments([])
     void window.api.agent.send(text, paths)
+  }
+
+  const addAttachments = (views: AttachmentView[]) => setAttachments((prev) => [...prev, ...views.filter((v) => !prev.some((p) => p.path === v.path))])
+
+  const screenshot = async () => {
+    setCaptureError(null)
+    try {
+      const a = await window.api.capture.choose()
+      if (a) addAttachments([a])
+    } catch (err) {
+      setCaptureError((err as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''))
+    }
   }
 
   const onDrop = async (ev: React.DragEvent) => {
@@ -192,12 +205,14 @@ export function Chat() {
         {attachments.length > 0 && (
           <AttachmentChips items={attachments} onRemove={(p) => setAttachments((as) => as.filter((a) => a.path !== p))} />
         )}
+        {captureError && <p className="capture-error">{captureError}</p>}
         <div className="chat-input-row">
           <textarea
             value={draft}
             rows={2}
             placeholder="輸入訊息，Enter 送出，Shift+Enter 換行"
             onChange={(ev) => setDraft(ev.target.value)}
+            onPaste={(ev) => void pastedAttachments(ev)?.then(addAttachments)}
             onKeyDown={(ev) => {
               // isComposing: don't send while an IME (注音 / 倉頡) is still composing.
               if (ev.key === 'Enter' && !ev.shiftKey && !ev.nativeEvent.isComposing) {
@@ -206,6 +221,9 @@ export function Chat() {
               }
             }}
           />
+          <button type="button" className="quiet capture-btn" aria-label="截圖" title="截圖給喵助看（也可以直接貼上圖片）" onClick={() => void screenshot()}>
+            <Icon name="camera" size={18} />
+          </button>
           {streamingId ? (
             <button type="button" onClick={() => window.api.agent.cancel()}>
               停下來

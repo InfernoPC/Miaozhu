@@ -1,0 +1,28 @@
+html[data-route='snip'], html[data-route='snip'] body { margin: 0; overflow: hidden; background: #000; }
+.snip { position: fixed; inset: 0; cursor: crosshair; background-size: 100% 100%; user-select: none; }
+.snip-dim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.35); }
+/* The selection stays clear; a huge shadow dims everything around it. */
+.snip-rect { position: absolute; outline: 2px solid #f59aab; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.35); }
+.snip-size {
+  position: absolute;
+  left: 0;
+  top: -26px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #231f20;
+  color: #fff;
+  font: 12px/1.6 ui-monospace, Menlo, Consolas, monospace;
+  white-space: nowrap;
+}
+.snip-hint {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: #231f20;
+  color: #fff;
+  font: 14px/1.4 'Huninn', 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+  pointer-events: none;
+}

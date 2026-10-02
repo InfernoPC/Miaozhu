@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { AttachmentView, DueReminder, LoadedSkin, PermissionRequest, PetSkinId, PetState, UpdateStatus } from '@shared/types'
-import { AttachmentChips, droppedPaths } from '../common/AttachmentChips'
+import { AttachmentChips, droppedPaths, pastedAttachments } from '../common/AttachmentChips'
 import { Icon } from '../common/Icon'
 import { Markdown } from '../common/Markdown'
 import { PermissionPrompt } from '../common/PermissionPrompt'
@@ -238,16 +238,31 @@ export function Pet() {
     void window.api.agent.send(text.trim(), paths)
   }
 
+  /** Files to work on, from a drop, a paste or a screenshot: open the input with them. */
+  const attach = (views: AttachmentView[]) => {
+    if (!views.length) return
+    setAttachments((prev) => [...prev, ...views.filter((v) => !prev.some((p) => p.path === v.path))])
+    setInputOpen(true)
+    setState('listening')
+    wake()
+  }
+
+  // Screenshots taken from the right-click menu.
+  useEffect(
+    () =>
+      window.api.capture.onAttached(({ attachment, error }) => {
+        if (attachment) attach([attachment])
+        else if (error) setBubble({ text: `**沒辦法截圖：**${error}`, error: true, streaming: false })
+      }),
+    []
+  )
+
   const onDrop = async (ev: React.DragEvent) => {
     ev.preventDefault()
     setDragOver(false)
     const paths = droppedPaths(ev)
     if (!paths.length) return
-    const views = await window.api.agent.describeAttachments(paths)
-    setAttachments((prev) => [...prev, ...views.filter((v) => !prev.some((p) => p.path === v.path))])
-    setInputOpen(true)
-    setState('listening')
-    wake()
+    attach(await window.api.agent.describeAttachments(paths))
   }
 
   const dropProps = {
@@ -368,6 +383,7 @@ export function Pet() {
               value={draft}
               placeholder={attachments.length ? '要我怎麼處理？' : '想問什麼？Enter 送出，Esc 收起'}
               onChange={(ev) => setDraft(ev.target.value)}
+              onPaste={(ev) => void pastedAttachments(ev)?.then(attach)}
               onKeyDown={(ev) => ev.key === 'Escape' && closeInput()}
             />
           </form>

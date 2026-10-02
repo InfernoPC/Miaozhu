@@ -1,0 +1,73 @@
+import { existsSync, mkdirSync, readFileSync, readdirSync, utimesSync, writeFileSync } from 'node:fs'
+import { basename, join } from 'node:path'
+import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { clipboard } from 'electron'
+import { cleanOldScreenshots, saveClipboardImage, takeScreenshot } from '../src/main/capture'
+import type { WindowManager } from '../src/main/windows'
+import { makeSandbox, type Sandbox } from './helpers/sandbox'
+
+let sb: Sandbox
+const shots = () => sb.path('.app-data', 'screenshots')
+const mockClipboard = clipboard as unknown as { items: Record<string, string>[] }
+
+beforeEach(() => {
+  sb?.cleanup()
+  sb = makeSandbox()
+  mockClipboard.items = []
+})
+afterAll(() => sb.cleanup())
+
+/** Records whether the app's windows were out of the way while capturing. */
+function fakeWindows() {
+  const log: string[] = []
+  const windows = {
+    hideForCapture: async () => {
+      log.push('hide')
+      return () => log.push('restore')
+    }
+  } as unknown as WindowManager
+  return { windows, log }
+}
+
+describe('screenshots the user takes', () => {
+  it('full screen: saves a PNG with the app windows hidden meanwhile', async () => {
+    const { windows, log } = fakeWindows()
+    const path = await takeScreenshot('full', windows)
+    expect(path).toMatch(/截圖 \d{4}-\d\d-\d\d \d\d\.\d\d\.\d\d\.png$/)
+    expect(readFileSync(path!, 'utf8')).toBe('png 2880x1800')
+    expect(log).toEqual(['hide', 'restore'])
+  })
+
+  it('two screenshots in the same second get different names', async () => {
+    const { windows } = fakeWindows()
+    const a = await takeScreenshot('full', windows)
+    const b = await takeScreenshot('full', windows)
+    expect(a).not.toBe(b)
+    expect(basename(b!)).toMatch(/\(2\)\.png$/)
+  })
+
+  it('pastes a PNG from the clipboard as is, and re-encodes other image types', async () => {
+    mockClipboard.items = [{ 'text/plain': 'x' }, { 'image/png': 'PNGDATA' }]
+    expect(readFileSync((await saveClipboardImage())!, 'utf8')).toBe('PNGDATA')
+    mockClipboard.items = [{ 'image/tiff': 'TIFF' }]
+    expect(readFileSync((await saveClipboardImage())!, 'utf8')).toBe('png from TIFF')
+  })
+
+  it('no image on the clipboard: nothing saved', async () => {
+    mockClipboard.items = [{ 'text/plain': 'hello' }]
+    expect(await saveClipboardImage()).toBeNull()
+    expect(existsSync(shots()) ? readdirSync(shots()) : []).toEqual([])
+  })
+
+  it('clears screenshots older than a week at startup', () => {
+    mkdirSync(shots(), { recursive: true })
+    const old = join(shots(), 'old.png')
+    const recent = join(shots(), 'recent.png')
+    writeFileSync(old, 'x')
+    writeFileSync(recent, 'x')
+    const eightDaysAgo = (Date.now() - 8 * 86_400_000) / 1000
+    utimesSync(old, eightDaysAgo, eightDaysAgo)
+    cleanOldScreenshots()
+    expect(readdirSync(shots())).toEqual(['recent.png'])
+  })
+})
