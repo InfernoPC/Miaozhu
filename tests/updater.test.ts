@@ -76,9 +76,11 @@ describe('install command', () => {
     expect(cmd.env.MIAOZHU_APP_DIR).toBe('/Users/me/Applications')
   })
 
-  it('on Windows, runs the PowerShell installer', () => {
+  it('on Windows, runs the PowerShell installer in its own window', () => {
     const cmd = installCommand('win32', 'C:\\Users\\me\\AppData\\Local\\Programs\\Miaozhu\\Miaozhu.exe', 'https://example.test')
-    expect(cmd.file).toBe('powershell.exe')
-    expect(cmd.args.at(-1)).toBe('irm https://example.test/install.ps1 | iex')
+    // Through `start`, so PowerShell gets a console of its own.
+    expect(cmd.file).toBe('cmd.exe')
+    expect(cmd.args.slice(0, 5)).toEqual(['/d', '/c', 'start', '""', 'powershell.exe'])
+    expect(cmd.args.at(-1)).toContain('irm https://example.test/install.ps1 | iex')
   })
 })

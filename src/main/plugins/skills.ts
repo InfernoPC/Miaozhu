@@ -1,5 +1,5 @@
 import { readdir, readFile, realpath } from 'node:fs/promises'
-import { join, relative } from 'node:path'
+import { join, relative, sep } from 'node:path'
 import { isInside } from '../tools/paths'
 import { ToolError, type ToolDef } from '../tools/types'
 import { splitFrontmatter, type Skill } from './manifest'
@@ -15,7 +15,7 @@ async function listFiles(dir: string, base = dir): Promise<string[]> {
   for (const e of await readdir(dir, { withFileTypes: true })) {
     const abs = join(dir, e.name)
     if (e.isDirectory()) out.push(...(await listFiles(abs, base)))
-    else if (e.isFile() && e.name !== 'SKILL.md') out.push(relative(base, abs))
+    else if (e.isFile() && e.name !== 'SKILL.md') out.push(relative(base, abs).split(sep).join('/')) // the same on every OS, as the model sees it
   }
   return out
 }

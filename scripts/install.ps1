@@ -8,6 +8,9 @@
 # Environment overrides: MIAOZHU_BASE_URL, MIAOZHU_NO_LAUNCH=1
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'   # the progress bar makes Invoke-WebRequest very slow
+# A log for when something goes wrong, especially in an update started from the app.
+$log = Join-Path $env:TEMP 'miaozhu-install.log'
+try { Start-Transcript -Path $log -Force | Out-Null } catch { }
 
 $repo = 'InfernoPC/Miaozhu'
 $base = if ($env:MIAOZHU_BASE_URL) { $env:MIAOZHU_BASE_URL } else { "https://github.com/$repo/releases/latest/download" }
@@ -23,7 +26,11 @@ try {
   $line = ($sums -split "`n") | Where-Object { $_ -match [regex]::Escape($file) + '\s*$' } | Select-Object -First 1
   if ($line) {
     $expected = ($line -split '\s+')[0].ToLower()
-    $actual = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLower()
+    # .NET instead of Get-FileHash: that cmdlet goes missing when Windows PowerShell inherits
+    # PowerShell 7's PSModulePath (e.g. the app was started from a pwsh window).
+    $stream = [System.IO.File]::OpenRead($setup)
+    try { $bytes = [System.Security.Cryptography.SHA256]::Create().ComputeHash($stream) } finally { $stream.Dispose() }
+    $actual = -join ($bytes | ForEach-Object { $_.ToString('x2') })
     if ($expected -ne $actual) { throw "Checksum mismatch; the download may be incomplete. Please try again." }
   }
 } catch [System.Net.WebException] {
@@ -50,3 +57,4 @@ $exe = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $exe) { throw "Installed, but Miaozhu.exe was not found. Looked in: $($candidates -join ', ')" }
 Write-Host "Miaozhu is installed: $exe"
 if ($env:MIAOZHU_NO_LAUNCH -ne '1') { Start-Process $exe }
+try { Stop-Transcript | Out-Null } catch { }

@@ -61,7 +61,7 @@ app.whenReady().then(async () => {
   reminders.start()
   updates.start()
   cleanOldScreenshots()
-  void plugins.start()
+  plugins.start().catch((err) => console.error('Plugins failed to start:', err))
   app.on('before-quit', () => {
     reminders.stop()
     updates.stop()

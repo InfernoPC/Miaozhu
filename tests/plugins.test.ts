@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs'
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
+import { pathToFileURL } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { Agent } from '../src/main/agent/agent'
@@ -87,7 +88,8 @@ command: ["${process.execPath.replace(/\\/g, '\\\\')}", "-e", "console.log('arg=
 `,
     '.mcp.json': { mcpServers: { tester: { command: process.execPath, args: ['${CLAUDE_PLUGIN_ROOT}/server.mjs'], env: { TEST_FLAG: 'on' } } } },
     // The MCP server is referenced through ${CLAUDE_PLUGIN_ROOT}, like Claude Code plugins do.
-    'server.mjs': `import(${JSON.stringify(MCP_SERVER)})`
+    // A file URL: import() of a bare Windows path (C:\...) fails.
+    'server.mjs': `import(${JSON.stringify(pathToFileURL(MCP_SERVER).href)})`
   })
 
 /** In-memory secrets, standing in for the encrypted settings store. */
@@ -115,7 +117,7 @@ describe('reading a plugin', () => {
     expect(p.secretNames).toEqual(['erp_token'])
     expect(p.mcpServers[0]).toMatchObject({ name: 'tester', transport: 'stdio' })
     // ${CLAUDE_PLUGIN_ROOT} resolves to the plugin's own folder.
-    expect((p.mcpServers[0] as { args: string[] }).args[0]).toBe(join(sb.path('src-plugins', 'handbook'), 'server.mjs'))
+    expect(resolve((p.mcpServers[0] as { args: string[] }).args[0])).toBe(join(sb.path('src-plugins', 'handbook'), 'server.mjs'))
   })
 
   it('turns a bad tool file into a warning instead of failing the whole plugin', () => {

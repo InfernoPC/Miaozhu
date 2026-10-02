@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { isPrivateHost } from '../tools/web'
 import { expandPath, isInside } from '../tools/paths'
 import { run } from '../util/run'
+import { removeDir } from '../util/remove'
 
 const GIT_TIMEOUT_MS = 180_000
 const MAX_CATALOG_BYTES = 5 * 1024 ** 2
@@ -227,7 +228,7 @@ export async function fetchMarketplace(src: MarketplaceSource, cacheDir: string,
   }
   const url = gitUrl(src.kind === 'github' ? src.repo : src.url, policy)
   const dest = join(cacheDir, createHash('sha1').update(url).digest('hex').slice(0, 12))
-  rmSync(dest, { recursive: true, force: true })
+  removeDir(dest)
   await sparseClone(url, dest, { ref: src.ref, paths: ['/.claude-plugin/'] })
   const file = join(dest, CATALOG_PATH)
   if (!existsSync(file)) throw new Error(`這個 repo 裡沒有 ${CATALOG_PATH}`)
