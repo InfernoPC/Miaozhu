@@ -9,7 +9,11 @@ import type { WindowManager } from '../windows'
 const KEEP_DAYS = 7
 const PICK_TIMEOUT_MS = 5 * 60_000
 
-const dir = () => join(app.getPath('userData'), 'screenshots')
+/**
+ * Not under userData: the agent may never read the app's own folder (it holds the secrets),
+ * so a screenshot kept there could be attached but not seen.
+ */
+const dir = () => join(app.getPath('temp'), 'Miaozhu Screenshots')
 
 /** "截圖 2026-10-02 14.03.05.png", unique within the folder. */
 function newPath(): string {

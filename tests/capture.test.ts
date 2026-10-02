@@ -4,10 +4,13 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { clipboard } from 'electron'
 import { cleanOldScreenshots, saveClipboardImage, takeScreenshot } from '../src/main/capture'
 import type { WindowManager } from '../src/main/windows'
+import { Agent, type AgentSettings } from '../src/main/agent/agent'
+import { ConversationStore } from '../src/main/agent/conversation-store'
+import { MockLLM } from './helpers/mock-llm'
 import { makeSandbox, type Sandbox } from './helpers/sandbox'
 
 let sb: Sandbox
-const shots = () => sb.path('.app-data', 'screenshots')
+const shots = () => sb.path('tmp', 'Miaozhu Screenshots')
 const mockClipboard = clipboard as unknown as { items: Record<string, string>[] }
 
 beforeEach(() => {
@@ -69,5 +72,32 @@ describe('screenshots the user takes', () => {
     utimesSync(old, eightDaysAgo, eightDaysAgo)
     cleanOldScreenshots()
     expect(readdirSync(shots())).toEqual(['recent.png'])
+  })
+})
+
+describe('sending a screenshot', () => {
+  it('the model actually gets the image (the folder is not a protected one)', async () => {
+    const llm = new MockLLM()
+    const baseURL = await llm.start()
+    try {
+      const settings: AgentSettings = {
+        activeProfile: () => ({ id: 'p', name: 'mock', kind: 'openai-compatible', baseURL, model: 'mock-model' }),
+        getApiKey: () => 'k',
+        allowedFolders: () => [],
+        searchCredentials: () => ({ config: { provider: 'none' } }),
+        persona: () => undefined,
+        places: () => [],
+        sensitiveFolders: () => [],
+        localProfile: () => null
+      }
+      const agent = new Agent(settings, () => {}, { hidePet: async () => () => {}, store: new ConversationStore() })
+      const path = await takeScreenshot('full', fakeWindows().windows)
+      llm.reset([{ text: '看到了' }])
+      await agent.send('這是什麼', [path!])
+      expect(llm.sentText).not.toContain('受保護')
+      expect(JSON.stringify(llm.requests[0].messages)).toContain('data:image')
+    } finally {
+      await llm.stop()
+    }
   })
 })

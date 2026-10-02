@@ -51,6 +51,7 @@ export function makeSandbox(): Sandbox {
 
   app.setPath('home', home)
   app.setPath('userData', path('.app-data'))
+  app.setPath('temp', path('tmp'))
   app.setPath('desktop', path('Desktop'))
   app.setPath('documents', path('Documents'))
   app.setPath('downloads', path('Downloads'))
