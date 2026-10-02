@@ -6,7 +6,7 @@ A cross-platform desktop AI assistant that lives on your screen as a line-art ca
 
 It connects to any OpenAI-compatible API, can use tools on your computer (files, shell, web, screenshots), and asks before doing anything that changes things.
 
-> Status: early development (milestones M1–M3 of [DESIGN.md](DESIGN.md) are done). The UI is in Traditional Chinese. macOS is tested; Windows is not yet.
+> Status: early development (milestones M1–M4 of [DESIGN.md](DESIGN.md) are done). The UI is in Traditional Chinese. macOS is tested; Windows is not yet.
 
 ## Features
 
@@ -15,9 +15,16 @@ It connects to any OpenAI-compatible API, can use tools on your computer (files,
 - Double-click for a full chat window with Markdown rendering.
 - Drag files or folders onto the cat to attach them, with quick actions like "summarize" or "translate".
 - Give it your own persona (name, personality, speaking style) in Settings → 角色. Language, honesty, permission and safety rules stay fixed underneath and can't be overridden by the persona.
+- Conversations are kept in a list: start a new one, reopen, rename or delete old ones.
+- Reminders: "remind me at 3 pm" or "every weekday at 9" — the cat jumps up on time, with snooze. Do-not-disturb and quiet hours hold reminders until they end.
+- Swap the character: two built-in cats, or install a skin pack (Lottie animations or one image per state; see [`skins/`](skins)).
+
+**Sensitive folders stay on your machine**
+- Mark folders (payroll, contracts…) as sensitive and pick a local model (Ollama, LM Studio). As soon as the cat reads from one, that conversation switches to the local model before anything is sent, stays local afterwards, and asks before any network call.
 
 **Works with the model you have**
 - Any OpenAI-compatible endpoint: OpenAI, Azure OpenAI, OpenRouter, LiteLLM / One API gateways, Ollama, LM Studio, vLLM.
+- Claude with an Anthropic Console API key (default Claude Opus 5.5, adaptive thinking, prompt caching, server-side refusal fallbacks).
 - OpenRouter sign-in in the browser (OAuth PKCE): no copying API keys.
 - Up to three fallback models, tried in order when the main one is rate-limited or down. Handy for free-tier models.
 - API keys are encrypted with the OS keychain (macOS Keychain / Windows DPAPI) and never reach the UI process.
@@ -34,6 +41,7 @@ It connects to any OpenAI-compatible API, can use tools on your computer (files,
 | Read web pages | Intranet and local addresses ask first | Intranet only |
 | Find places on Google Maps | Ratings, review counts, addresses and map links (needs the Serper key) | No |
 | Plan a route | Opens Google Maps directions in your browser; no key needed | No |
+| Set, list and cancel reminders | One-off or repeating | No |
 | Screenshot | macOS asks for Screen Recording permission once | Every time |
 
 **Plugins** (Settings → 外掛)
@@ -89,7 +97,7 @@ This builds and launches Electron on its own, so you only need to allow "Electro
 | Double-click | Open the chat window |
 | Drag | Move the cat |
 | Drop files or folders on it | Attach them, with quick-action buttons |
-| Right-click | Menu: chat, switch model, switch skin, clear chat, settings, quit |
+| Right-click | Menu: chat, switch model, switch skin, do-not-disturb, new conversation, settings, quit |
 
 ## Scripts
 
@@ -129,8 +137,7 @@ tests/                    # Vitest: permissions, tools, agent loop, providers, s
 
 See [DESIGN.md](DESIGN.md) (Traditional Chinese). Next up:
 
-- **M4**: reminders, conversation history list, swappable animated skins, local-only mode for sensitive folders
-- **M5**: signed installers, auto-update, audit log viewer
+- **M5**: signed installers, auto-update, audit log viewer, a company plugin catalog, Windows testing
 
 ## Credits
 
