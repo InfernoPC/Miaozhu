@@ -90,6 +90,10 @@ export interface SettingsView {
   sensitiveFolders: string[]
   /** The local profile used for them; must be marked isLocal. */
   localProfileId: string | null
+  /** Where screenshots and pasted images are saved. */
+  screenshotFolder: string
+  /** The default temp folder, cleaned after a week; a chosen folder is never cleaned. */
+  screenshotFolderIsDefault: boolean
 }
 
 export interface SaveSearchInput {
@@ -375,6 +379,10 @@ export interface DesktopApi {
     addSensitiveFolder(): Promise<SettingsView>
     removeSensitiveFolder(path: string): Promise<SettingsView>
     setLocalProfile(id: string | null): Promise<SettingsView>
+    /** Opens a folder picker; rejects protected locations. */
+    chooseScreenshotFolder(): Promise<SettingsView>
+    resetScreenshotFolder(): Promise<SettingsView>
+    openScreenshotFolder(): Promise<void>
   }
   plugins: {
     list(): Promise<PluginView[]>

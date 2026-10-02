@@ -1,6 +1,6 @@
 import { app, clipboard, desktopCapturer, ipcMain, nativeImage, screen, systemPreferences } from 'electron'
 import { existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import type { CaptureMode } from '@shared/types'
 import { missingPermission } from '../tools/screen'
 import { run } from '../util/run'
@@ -13,25 +13,29 @@ const PICK_TIMEOUT_MS = 5 * 60_000
  * Not under userData: the agent may never read the app's own folder (it holds the secrets),
  * so a screenshot kept there could be attached but not seen.
  */
-const dir = () => join(app.getPath('temp'), 'Miaozhu Screenshots')
+export const defaultScreenshotFolder = () => join(app.getPath('temp'), 'Miaozhu Screenshots')
 
 /** "截圖 2026-10-02 14.03.05.png", unique within the folder. */
-function newPath(): string {
-  mkdirSync(dir(), { recursive: true })
+function newPath(folder: string): string {
+  mkdirSync(folder, { recursive: true })
   const d = new Date()
   const p = (n: number) => String(n).padStart(2, '0')
   const base = `截圖 ${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}.${p(d.getMinutes())}.${p(d.getSeconds())}`
-  let path = join(dir(), `${base}.png`)
-  for (let i = 2; existsSync(path); i++) path = join(dir(), `${base} (${i}).png`)
+  let path = join(folder, `${base}.png`)
+  for (let i = 2; existsSync(path); i++) path = join(folder, `${base} (${i}).png`)
   return path
 }
 
-/** Screenshots are only needed until they've been sent; old ones are cleared at startup. */
+/**
+ * Screenshots in the default (temp) folder are only needed until they've been sent; old ones
+ * are cleared at startup. A folder the user chose is theirs and is never cleaned.
+ */
 export function cleanOldScreenshots(): void {
-  if (!existsSync(dir())) return
+  const dir = defaultScreenshotFolder()
+  if (!existsSync(dir)) return
   const cutoff = Date.now() - KEEP_DAYS * 86_400_000
-  for (const name of readdirSync(dir())) {
-    const file = join(dir(), name)
+  for (const name of readdirSync(dir)) {
+    const file = join(dir, name)
     try {
       if (statSync(file).mtimeMs < cutoff) rmSync(file, { force: true })
     } catch {
@@ -57,7 +61,7 @@ async function grabDisplay(display: Electron.Display): Promise<Electron.NativeIm
 /** macOS's own picker: drag a region, or press Space and click a window. Esc cancels. */
 async function pickMac(path: string): Promise<boolean> {
   // -i interactive, -o no window shadow, -x no sound. Exits 0 with no file when cancelled.
-  await run('screencapture', ['-i', '-o', '-x', path], dir(), PICK_TIMEOUT_MS).catch(() => {})
+  await run('screencapture', ['-i', '-o', '-x', path], dirname(path), PICK_TIMEOUT_MS).catch(() => {})
   return existsSync(path) && statSync(path).size > 0
 }
 
@@ -99,9 +103,9 @@ async function pickOverlay(windows: WindowManager, path: string): Promise<boolea
  * Takes a screenshot the user asked for and saves it as a PNG for attaching. The app's own
  * windows step aside meanwhile. Returns null when the user cancels.
  */
-export async function takeScreenshot(mode: CaptureMode, windows: WindowManager): Promise<string | null> {
+export async function takeScreenshot(mode: CaptureMode, windows: WindowManager, folder = defaultScreenshotFolder()): Promise<string | null> {
   checkPermission()
-  const path = newPath()
+  const path = newPath(folder)
   const restore = await windows.hideForCapture()
   try {
     if (mode === 'full') {
@@ -117,7 +121,7 @@ export async function takeScreenshot(mode: CaptureMode, windows: WindowManager):
 }
 
 /** An image on the clipboard (e.g. from ⌃⇧⌘4 or Win+Shift+S), saved for attaching. */
-export async function saveClipboardImage(): Promise<string | null> {
+export async function saveClipboardImage(folder = defaultScreenshotFolder()): Promise<string | null> {
   for (const item of await clipboard.read()) {
     const type = item.types.find((t) => t.startsWith('image/'))
     if (!type) continue
@@ -126,7 +130,7 @@ export async function saveClipboardImage(): Promise<string | null> {
     // Re-encode anything that isn't PNG (TIFF, JPEG…) so the model gets a format it reads.
     const png = type === 'image/png' ? bytes : nativeImage.createFromBuffer(bytes).toPNG()
     if (!png.length) continue
-    const path = newPath()
+    const path = newPath(folder)
     writeFileSync(path, png)
     return path
   }

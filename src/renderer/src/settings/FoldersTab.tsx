@@ -5,6 +5,7 @@ import { Icon } from '../common/Icon'
 export function FoldersTab() {
   const [view, setView] = useState<SettingsView | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [screenshotError, setScreenshotError] = useState<string | null>(null)
 
   useEffect(() => {
     void window.api.settings.get().then(setView)
@@ -17,6 +18,15 @@ export function FoldersTab() {
       setView(await window.api.settings.addAllowedFolder())
     } catch (err) {
       setError((err as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''))
+    }
+  }
+
+  const chooseScreenshotFolder = async () => {
+    setScreenshotError(null)
+    try {
+      setView(await window.api.settings.chooseScreenshotFolder())
+    } catch (err) {
+      setScreenshotError((err as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''))
     }
   }
 
@@ -93,6 +103,30 @@ export function FoldersTab() {
         {view.sensitiveFolders.length > 0 && !view.localProfileId && (
           <p className="status err">已設定敏感資料夾，但還沒指定本機模型：喵助會拒絕讀取這些資料夾。</p>
         )}
+      </section>
+
+      <section>
+        <h2>截圖存放位置</h2>
+        <p className="hint">截圖和貼上的圖片會先存在這裡，再交給喵助看。</p>
+        <ul className="folder-list">
+          <li>
+            <span className="folder-path">
+              <Icon name="folder" size={16} />
+              {view.screenshotFolder}
+            </span>
+            <button onClick={() => void window.api.settings.openScreenshotFolder()}>開啟</button>
+          </li>
+        </ul>
+        <div className="actions">
+          <button onClick={chooseScreenshotFolder}>變更…</button>
+          {!view.screenshotFolderIsDefault && <button onClick={async () => setView(await window.api.settings.resetScreenshotFolder())}>恢復預設</button>}
+        </div>
+        <p className="hint">
+          {view.screenshotFolderIsDefault
+            ? '預設是系統暫存資料夾，超過 7 天的截圖會自動清除。'
+            : '自訂的資料夾不會自動清除，截圖會一直保留。'}
+        </p>
+        {screenshotError && <p className="status err">{screenshotError}</p>}
       </section>
 
       <section>

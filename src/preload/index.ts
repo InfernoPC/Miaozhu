@@ -34,7 +34,10 @@ const api: DesktopApi = {
     savePlaces: (places) => ipcRenderer.invoke('settings:savePlaces', places),
     addSensitiveFolder: () => ipcRenderer.invoke('settings:addSensitiveFolder'),
     removeSensitiveFolder: (path) => ipcRenderer.invoke('settings:removeSensitiveFolder', path),
-    setLocalProfile: (id) => ipcRenderer.invoke('settings:setLocalProfile', id)
+    setLocalProfile: (id) => ipcRenderer.invoke('settings:setLocalProfile', id),
+    chooseScreenshotFolder: () => ipcRenderer.invoke('settings:chooseScreenshotFolder'),
+    resetScreenshotFolder: () => ipcRenderer.invoke('settings:resetScreenshotFolder'),
+    openScreenshotFolder: () => ipcRenderer.invoke('settings:openScreenshotFolder')
   },
   plugins: {
     list: () => ipcRenderer.invoke('plugins:list'),

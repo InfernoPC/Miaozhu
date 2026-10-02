@@ -2,7 +2,8 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, utimesSync, writeFile
 import { basename, join } from 'node:path'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { clipboard } from 'electron'
-import { cleanOldScreenshots, saveClipboardImage, takeScreenshot } from '../src/main/capture'
+import { cleanOldScreenshots, defaultScreenshotFolder, saveClipboardImage, takeScreenshot } from '../src/main/capture'
+import { SettingsStore } from '../src/main/settings/store'
 import type { WindowManager } from '../src/main/windows'
 import { Agent, type AgentSettings } from '../src/main/agent/agent'
 import { ConversationStore } from '../src/main/agent/conversation-store'
@@ -99,5 +100,31 @@ describe('sending a screenshot', () => {
     } finally {
       await llm.stop()
     }
+  })
+})
+
+describe('choosing where screenshots go', () => {
+  it('saves into the chosen folder, and that folder is never cleaned', async () => {
+    const mine = sb.path('Pictures', 'Shots')
+    const path = await takeScreenshot('full', fakeWindows().windows, mine)
+    expect(path!.startsWith(mine)).toBe(true)
+    mockClipboard.items = [{ 'image/png': 'P' }]
+    expect((await saveClipboardImage(mine))!.startsWith(mine)).toBe(true)
+
+    const old = join(mine, 'my old screenshot.png')
+    writeFileSync(old, 'x')
+    const eightDaysAgo = (Date.now() - 8 * 86_400_000) / 1000
+    utimesSync(old, eightDaysAgo, eightDaysAgo)
+    cleanOldScreenshots()
+    expect(existsSync(old)).toBe(true)
+  })
+
+  it('the setting defaults to the temp folder, can be changed and reset', () => {
+    const store = new SettingsStore()
+    expect(store.view()).toMatchObject({ screenshotFolder: defaultScreenshotFolder(), screenshotFolderIsDefault: true })
+    store.setScreenshotFolder(sb.path('Pictures'))
+    // A fresh store reads it back from disk.
+    expect(new SettingsStore().view()).toMatchObject({ screenshotFolder: sb.path('Pictures'), screenshotFolderIsDefault: false })
+    expect(store.setScreenshotFolder(null)).toMatchObject({ screenshotFolder: defaultScreenshotFolder(), screenshotFolderIsDefault: true })
   })
 })

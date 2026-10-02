@@ -1,5 +1,5 @@
 import { BrowserWindow, Menu, app, dialog, ipcMain, shell } from 'electron'
-import { existsSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import {
   type HitRect,
   type PermissionDecision,
@@ -22,7 +22,8 @@ import type { ReminderService } from './reminders/service'
 import type { ConversationStore } from './agent/conversation-store'
 import type { SkinPackManager } from './skins/skin-packs'
 import type { SettingsStore } from './settings/store'
-import { saveClipboardImage, takeScreenshot } from './capture'
+import { defaultScreenshotFolder, saveClipboardImage, takeScreenshot } from './capture'
+import { realPath } from './tools/paths'
 import { launchInstaller, type UpdateChecker } from './updates/updater'
 import { searchWeb } from './tools/web'
 import type { WindowManager } from './windows'
@@ -93,8 +94,13 @@ export function registerIpc(
     // Give the child a moment to detach before this process goes away.
     setTimeout(() => app.quit(), 500)
   }
+  /** The chosen folder, unless it has since become off-limits to the agent. */
+  const screenshotFolder = async () => {
+    const chosen = settings.screenshotFolder()
+    return agent.guard.isBlocked(await realPath(chosen)) ? defaultScreenshotFolder() : chosen
+  }
   const capture = async (mode: CaptureMode): Promise<AttachmentView | null> => {
-    const path = await takeScreenshot(mode, windows)
+    const path = await takeScreenshot(mode, windows, await screenshotFolder())
     return path ? (await agent.describeAttachments([path]))[0] : null
   }
   /** From the pet's menu: the result goes to the pet's input box. */
@@ -230,6 +236,22 @@ export function registerIpc(
     if (agent.guard.isBlocked(chosen)) throw new Error('這個資料夾屬於受保護的位置，不能加入')
     return settings.setAllowedFolders([...settings.allowedFolders(), chosen])
   })
+  ipcMain.handle('settings:chooseScreenshotFolder', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const options: Electron.OpenDialogOptions = { title: '選擇截圖存放位置', defaultPath: settings.screenshotFolder(), properties: ['openDirectory', 'createDirectory'] }
+    const res = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options)
+    if (res.canceled || !res.filePaths[0]) return settings.view()
+    const chosen = res.filePaths[0]
+    // Otherwise screenshots would be saved where the agent can never read them.
+    if (agent.guard.isBlocked(await realPath(chosen))) throw new Error('這個資料夾屬於受保護的位置，喵助讀不到裡面的截圖，請換一個')
+    return settings.setScreenshotFolder(chosen)
+  })
+  ipcMain.handle('settings:resetScreenshotFolder', () => settings.setScreenshotFolder(null))
+  ipcMain.handle('settings:openScreenshotFolder', async () => {
+    const folder = await screenshotFolder()
+    mkdirSync(folder, { recursive: true })
+    await shell.openPath(folder)
+  })
   ipcMain.handle('settings:addSensitiveFolder', async (e) => {
     const win = BrowserWindow.fromWebContents(e.sender)
     const options: Electron.OpenDialogOptions = { title: '選擇只能交給本機模型的資料夾', properties: ['openDirectory'] }
@@ -328,7 +350,7 @@ export function registerIpc(
     })
   })
   ipcMain.handle('capture:paste', async () => {
-    const path = await saveClipboardImage()
+    const path = await saveClipboardImage(await screenshotFolder())
     return path ? (await agent.describeAttachments([path]))[0] : null
   })
 

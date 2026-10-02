@@ -12,6 +12,7 @@ import type {
 } from '@shared/types'
 import { blockedRoots } from '../permissions/guard'
 import { displayPath } from '../tools/paths'
+import { defaultScreenshotFolder } from '../capture'
 import { readJson, writeJson } from '../util/json-file'
 import { DEFAULT_PERSONA, fixedRules, MAX_PERSONA_CHARS, normalizePersona } from '../agent/prompt'
 
@@ -27,6 +28,8 @@ interface ConfigFile {
   places?: SavedPlace[]
   sensitiveFolders?: string[]
   localProfileId?: string
+  /** Missing = the default temp folder. */
+  screenshotFolder?: string
 }
 
 /** Search API keys share the secrets file with profile keys under this id. */
@@ -59,8 +62,21 @@ export class SettingsStore {
       maxPersonaChars: MAX_PERSONA_CHARS,
       places: this.places(),
       sensitiveFolders: this.sensitiveFolders(),
-      localProfileId: this.localProfile()?.id ?? null
+      localProfileId: this.localProfile()?.id ?? null,
+      screenshotFolder: this.screenshotFolder(),
+      screenshotFolderIsDefault: !this.config.screenshotFolder
     }
+  }
+
+  screenshotFolder(): string {
+    return this.config.screenshotFolder || defaultScreenshotFolder()
+  }
+
+  /** null = back to the default. The caller checks the folder isn't a protected one. */
+  setScreenshotFolder(folder: string | null): SettingsView {
+    this.config.screenshotFolder = folder ?? undefined
+    this.persist()
+    return this.view()
   }
 
   sensitiveFolders(): string[] {
