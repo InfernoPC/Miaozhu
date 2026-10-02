@@ -37,7 +37,9 @@ release: ## Tag and push a release: make release VERSION=0.2.0
 	@[ -z "$$(git status --porcelain)" ] || { echo "還有沒 commit 的變更"; exit 1; }
 	@[ "$$(git rev-parse --abbrev-ref HEAD)" = main ] || { echo "請在 main 上發佈"; exit 1; }
 	npm version $(VERSION) -m "Release v%s"
-	git push origin main "v$(VERSION)"
+	git push origin main
+	@# Pushed on its own: a tag pushed together with the branch sometimes doesn't trigger Actions.
+	git push origin "v$(VERSION)"
 	@echo "已推送 v$(VERSION)，進度：gh run watch"
 
 clean: ## Remove build output
