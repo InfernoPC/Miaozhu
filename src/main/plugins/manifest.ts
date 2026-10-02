@@ -39,7 +39,7 @@ export interface LoadedPlugin {
   skills: Skill[]
   mcpServers: McpServerConfig[]
   tools: DeclaredToolSpec[]
-  /** `${secret:name}` placeholders used by declared tools. */
+  /** `${secret:name}` placeholders used by declared tools and MCP servers. */
   secretNames: string[]
   warnings: string[]
 }
@@ -147,13 +147,13 @@ function readDeclaredTools(dir: string, warnings: string[]): DeclaredToolSpec[] 
   return tools
 }
 
-/** Every `${secret:name}` in a declared tool's URL, headers, body or command. */
-function secretNamesOf(tools: DeclaredToolSpec[]): string[] {
+export const SECRET_RE = /\$\{secret:([a-zA-Z0-9_-]+)\}/g
+
+/** Every `${secret:name}` in a declared tool (URL, headers, body, command) or MCP server config. */
+function secretNamesOf(tools: DeclaredToolSpec[], servers: McpServerConfig[]): string[] {
   const names = new Set<string>()
-  for (const t of tools) {
-    const text = JSON.stringify([t.request, t.command])
-    for (const m of text.matchAll(/\$\{secret:([a-zA-Z0-9_-]+)\}/g)) names.add(m[1])
-  }
+  const text = JSON.stringify([tools.map((t) => [t.request, t.command]), servers])
+  for (const m of text.matchAll(SECRET_RE)) names.add(m[1])
   return [...names]
 }
 
@@ -187,7 +187,7 @@ export function readPlugin(dir: string, id = basename(dir)): LoadedPlugin {
     skills,
     mcpServers,
     tools,
-    secretNames: secretNamesOf(tools),
+    secretNames: secretNamesOf(tools, mcpServers),
     warnings
   }
 }

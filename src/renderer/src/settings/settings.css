@@ -218,3 +218,11 @@ pre.mcp-error { margin: 2px 0 0; font: 11.5px/1.5 var(--font-code); white-space:
   border-top: 1.5px solid var(--rule);
 }
 .dialog-actions .status { flex: 1 1 100%; margin: 0; }
+.dialog-form { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.plugin-dialog .subtabs { margin: 0; }
+.mcp-paste { width: 100%; font: 12px/1.5 var(--font-code); resize: vertical; }
+.mcp-form { display: flex; flex-direction: column; gap: 10px; }
+.mcp-form > label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--graphite); }
+.mcp-form input, .mcp-form textarea { font: 12.5px/1.5 var(--font-code); color: var(--ink); }
+.mcp-form textarea { resize: vertical; }
+.mcp-transport { display: flex; gap: 16px; font-size: 13px; }

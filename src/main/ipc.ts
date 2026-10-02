@@ -14,6 +14,7 @@ import { cancelOpenRouterConnect, connectOpenRouter } from './auth/openrouter'
 import { createProvider, describeError } from './providers'
 import { auditLogPath } from './permissions/guard'
 import type { PluginManager } from './plugins/manager'
+import { formToJson, parseMcpImport } from './plugins/mcp-import'
 import type { MarketplaceManager } from './plugins/marketplaces'
 import type { ReminderService } from './reminders/service'
 import type { ConversationStore } from './agent/conversation-store'
@@ -131,6 +132,8 @@ export function registerIpc(
   ipcMain.handle('plugins:list', () => plugins.list())
   ipcMain.handle('plugins:inspect', async (e, source: PluginSource) => {
     if (source.kind === 'git') return plugins.inspect(source)
+    if (source.kind === 'mcp') return plugins.inspect({ kind: 'mcp', import: parseMcpImport(source.text, source.name) })
+    if (source.kind === 'mcp-form') return plugins.inspect({ kind: 'mcp', import: parseMcpImport(formToJson(source.form)) })
     if (source.kind === 'marketplace') {
       const { entry, fetch } = await marketplaces.resolve(source.marketplace, source.entry)
       const sha = entry.source.kind === 'git' ? entry.source.sha : undefined

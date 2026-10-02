@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { PluginMcpView, PluginPreview, PluginSource, PluginView, ToolRisk } from '@shared/types'
 import { Icon } from '../common/Icon'
 import { MarketplaceBrowser } from './MarketplaceBrowser'
+import { McpAddDialog } from './McpAddDialog'
 
 const RISK_LABEL: Record<ToolRisk, string> = {
   read: '讀取',
@@ -167,6 +168,20 @@ function ReviewDialog({ review, onInstall, onClose, onShow }: { review: Review; 
             </h3>
             {preview.plugin.description && <p className="hint">{preview.plugin.description}</p>}
             {preview.replaces && <p className="status err">會取代已安裝的「{preview.replaces}」</p>}
+            {preview.movedSecrets && (
+              <p className="hint">
+                <Icon name="lock" size={13} /> 已把 {preview.movedSecrets.join('、')} 從設定中移出，安裝時會存進系統鑰匙圈。
+              </p>
+            )}
+            {preview.plugin.secrets.some((x) => !x.isSet) && (
+              <p className="hint">
+                安裝後還要填密鑰：
+                {preview.plugin.secrets
+                  .filter((x) => !x.isSet)
+                  .map((x) => x.name)
+                  .join('、')}
+              </p>
+            )}
             <p className="hint">請確認下列內容。MCP 伺服器會在你的電腦上執行下面列出的指令；之後每次使用工具時，仍會依風險等級先問你。</p>
             <PluginContents p={preview.plugin} preview />
           </div>
@@ -225,6 +240,7 @@ export function PluginsTab() {
   const [open, setOpen] = useState<string | null>(null)
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
   const [view, setView] = useState<'installed' | 'browse'>('installed')
+  const [addingMcp, setAddingMcp] = useState(false)
 
   useEffect(() => {
     const refresh = () => void window.api.plugins.list().then(setPlugins)
@@ -290,6 +306,10 @@ export function PluginsTab() {
             <Icon name="file" size={15} />
             從 zip 安裝
           </button>
+          <button disabled={busy} onClick={() => setAddingMcp(true)}>
+            <Icon name="plus" size={15} />
+            新增 MCP 伺服器
+          </button>
         </div>
         <form
           className="row"
@@ -304,6 +324,16 @@ export function PluginsTab() {
           </button>
         </form>
       </section>
+      )}
+
+      {addingMcp && (
+        <McpAddDialog
+          onClose={() => setAddingMcp(false)}
+          onPreview={(preview) => {
+            setAddingMcp(false)
+            setReview({ step: 'confirm', preview })
+          }}
+        />
       )}
 
       {review && (

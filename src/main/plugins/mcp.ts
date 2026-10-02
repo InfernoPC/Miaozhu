@@ -3,7 +3,7 @@ import { getDefaultEnvironment, StdioClientTransport } from '@modelcontextprotoc
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import type { PluginMcpView } from '@shared/types'
 import { ToolError, type ToolDef } from '../tools/types'
-import { TOOL_NAME_RE, type McpServerConfig } from './manifest'
+import { SECRET_RE, TOOL_NAME_RE, type McpServerConfig } from './manifest'
 
 const CONNECT_TIMEOUT_MS = 60_000 // `npx` may download the server on first run
 const CALL_TIMEOUT_MS = 120_000
@@ -20,6 +20,26 @@ export function describeTarget(cfg: McpServerConfig): string {
   return cfg.transport === 'http' ? cfg.url : [cfg.command, ...cfg.args].map((a) => (/\s/.test(a) ? JSON.stringify(a) : a)).join(' ')
 }
 
+/**
+ * Fills `${secret:NAME}` from the keychain just before starting. The stored config (and what
+ * the UI shows) keeps the placeholders.
+ */
+export function withSecrets(cfg: McpServerConfig, secret: (name: string) => string | undefined): { config: McpServerConfig; missing: string[] } {
+  const missing = new Set<string>()
+  const fill = (v: string) =>
+    v.replace(SECRET_RE, (_m, n: string) => {
+      const value = secret(n)
+      if (!value) missing.add(n)
+      return value ?? ''
+    })
+  const rec = (r: Record<string, string>) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, fill(v)]))
+  const config: McpServerConfig =
+    cfg.transport === 'http'
+      ? { ...cfg, url: fill(cfg.url), headers: rec(cfg.headers) }
+      : { ...cfg, command: fill(cfg.command), args: cfg.args.map(fill), env: rec(cfg.env) }
+  return { config, missing: [...missing] }
+}
+
 type McpContent = { type: string; text?: string; data?: string; mimeType?: string; resource?: { text?: string; uri?: string } }
 
 /** One running MCP server and the tools it offers. */
@@ -33,7 +53,8 @@ export class McpConnection {
   constructor(
     readonly pluginName: string,
     readonly config: McpServerConfig,
-    private onChange: () => void
+    private onChange: () => void,
+    private secret: (name: string) => string | undefined = () => undefined
   ) {}
 
   view(): PluginMcpView {
@@ -44,15 +65,22 @@ export class McpConnection {
     this.status = 'starting'
     this.error = undefined
     this.onChange()
+    const { config, missing } = withSecrets(this.config, this.secret)
+    if (missing.length) {
+      this.status = 'error'
+      this.error = `還沒填密鑰：${missing.join('、')}。請在下方「密鑰」填入，填好後會自動啟動。`
+      this.onChange()
+      return
+    }
     const client = new Client({ name: 'miaozhu', version: '0.1.0' })
     try {
       const transport =
-        this.config.transport === 'http'
-          ? new StreamableHTTPClientTransport(new URL(this.config.url), { requestInit: { headers: this.config.headers } })
+        config.transport === 'http'
+          ? new StreamableHTTPClientTransport(new URL(config.url), { requestInit: { headers: config.headers } })
           : new StdioClientTransport({
-              command: this.config.command,
-              args: this.config.args,
-              env: { ...getDefaultEnvironment(), ...this.config.env },
+              command: config.command,
+              args: config.args,
+              env: { ...getDefaultEnvironment(), ...config.env },
               stderr: 'pipe'
             })
       if (transport instanceof StdioClientTransport) {
@@ -68,7 +96,13 @@ export class McpConnection {
     } catch (e) {
       this.status = 'error'
       const tail = this.stderrTail.trim().split('\n').slice(-5).join('\n')
-      this.error = `${(e as Error).message}${tail ? `\n${tail}` : ''}`
+      let error = `${(e as Error).message}${tail ? `\n${tail}` : ''}`
+      // A server may echo its own URL or token back in an error.
+      for (const m of JSON.stringify(this.config).matchAll(SECRET_RE)) {
+        const v = this.secret(m[1])
+        if (v && v.length >= 4) error = error.split(v).join('••••')
+      }
+      this.error = error
       this.tools = []
       await client.close().catch(() => {})
     }

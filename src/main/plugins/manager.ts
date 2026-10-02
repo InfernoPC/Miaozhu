@@ -1,6 +1,6 @@
 import { app } from 'electron'
 import { randomUUID } from 'node:crypto'
-import { cpSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import type { PluginPreview, PluginView } from '@shared/types'
 import type { ToolDef } from '../tools/types'
@@ -10,6 +10,7 @@ import { run } from '../util/run'
 import { declaredTool } from './declared-tools'
 import { looksLikePlugin, readPlugin, type LoadedPlugin } from './manifest'
 import { describeTarget, McpConnection } from './mcp'
+import type { McpImport } from './mcp-import'
 import { loadSkillTool, type SkillEntry } from './skills'
 
 /** Where plugin secrets live; the store encrypts them like API keys. */
@@ -49,7 +50,7 @@ function findPluginRoot(dir: string): string | null {
 export class PluginManager {
   private plugins: LoadedPlugin[] = []
   private connections = new Map<string, McpConnection[]>()
-  private staged = new Map<string, { dir: string; root: string; plugin: LoadedPlugin; origin?: PluginOrigin }>()
+  private staged = new Map<string, { dir: string; root: string; plugin: LoadedPlugin; origin?: PluginOrigin; secrets?: Record<string, string> }>()
   private state: StateFile = readJson<StateFile>(statePath(), { enabled: {} })
 
   constructor(
@@ -79,7 +80,7 @@ export class PluginManager {
 
   private async startPlugin(p: LoadedPlugin): Promise<void> {
     await this.stopPlugin(p.id)
-    const conns = p.mcpServers.map((cfg) => new McpConnection(p.name, cfg, this.onChange))
+    const conns = p.mcpServers.map((cfg) => new McpConnection(p.name, cfg, this.onChange, (n) => this.vault.get(secretKey(p.id, n))))
     this.connections.set(p.id, conns)
     await Promise.all(conns.map((c) => c.start()))
   }
@@ -161,13 +162,23 @@ export class PluginManager {
       | { kind: 'git'; url: string }
       /** A marketplace entry: `fetch` downloads it into the given folder and returns the plugin root. */
       | { kind: 'entry'; fetch: (dest: string) => Promise<string>; origin: PluginOrigin }
+      /** MCP servers the user pasted or typed in; becomes a plugin holding just a .mcp.json. */
+      | { kind: 'mcp'; import: McpImport }
   ): Promise<PluginPreview> {
     const stagingId = randomUUID()
     const dir = join(stagingDir(), stagingId)
     mkdirSync(dir, { recursive: true })
     try {
       let fetchedRoot: string | null = null
-      if (source.kind === 'entry') {
+      if (source.kind === 'mcp') {
+        const { name, servers } = source.import
+        const root = join(dir, name)
+        mkdirSync(join(root, '.claude-plugin'), { recursive: true })
+        const description = `MCP 伺服器：${Object.keys(servers).join('、')}`
+        writeFileSync(join(root, '.claude-plugin', 'plugin.json'), JSON.stringify({ name, description }, null, 2))
+        writeFileSync(join(root, '.mcp.json'), JSON.stringify({ mcpServers: servers }, null, 2))
+        fetchedRoot = root
+      } else if (source.kind === 'entry') {
         fetchedRoot = await source.fetch(dir)
       } else if (source.kind === 'git') {
         if (!/^(https:\/\/|git@)[^\s]+$/.test(source.url)) throw new Error('請輸入 https:// 或 git@ 開頭的 Git 網址')
@@ -183,9 +194,18 @@ export class PluginManager {
       // Marketplace installs are known by the entry name, as in Claude Code.
       const origin = source.kind === 'entry' ? source.origin : undefined
       const plugin = readPlugin(root, pluginId(origin?.entry ?? readPlugin(root).name))
-      this.staged.set(stagingId, { dir, root, plugin, origin })
+      const secrets = source.kind === 'mcp' ? source.import.secrets : undefined
+      this.staged.set(stagingId, { dir, root, plugin, origin, secrets })
       const existing = this.plugins.find((p) => p.id === plugin.id)
-      return { stagingId, plugin: this.toView(plugin, true, false), replaces: existing ? existing.name : undefined }
+      const view = this.toView(plugin, true, false)
+      // Pasted credentials are stored on install; show them as provided, not missing.
+      if (secrets) view.secrets = view.secrets.map((x) => ({ ...x, isSet: x.isSet || x.name in secrets }))
+      return {
+        stagingId,
+        plugin: view,
+        replaces: existing ? existing.name : undefined,
+        movedSecrets: secrets && Object.keys(secrets).length ? Object.keys(secrets) : undefined
+      }
     } catch (e) {
       rmSync(dir, { recursive: true, force: true })
       throw e
@@ -211,6 +231,7 @@ export class PluginManager {
     else cpSync(s.root, target, { recursive: true, filter: (src) => !/[\\/]\.git([\\/]|$)/.test(src) })
     rmSync(s.dir, { recursive: true, force: true })
 
+    for (const [name, value] of Object.entries(s.secrets ?? {})) this.vault.set(secretKey(s.plugin.id, name), value)
     const installed = readPlugin(target, s.plugin.id)
     this.plugins = [...this.plugins.filter((p) => p.id !== installed.id), installed]
     this.state.enabled[installed.id] = true
@@ -251,6 +272,11 @@ export class PluginManager {
 
   setSecret(id: string, name: string, value: string): PluginView[] {
     this.vault.set(secretKey(id, name), value)
+    // MCP servers read secrets when they start: restart the ones that use this one.
+    const p = this.plugins.find((x) => x.id === id)
+    if (p && this.isEnabled(id) && JSON.stringify(p.mcpServers).includes(`\${secret:${name}}`)) {
+      void this.startPlugin(p).then(() => this.onChange())
+    }
     return this.list()
   }
 

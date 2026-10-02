@@ -291,6 +291,23 @@ export type PluginSource =
   | { kind: 'zip' }
   | { kind: 'git'; url: string }
   | { kind: 'marketplace'; marketplace: string; entry: string }
+  /** MCP servers pasted as JSON (Claude Desktop / Claude Code / VS Code format). */
+  | { kind: 'mcp'; text: string; name?: string }
+  | { kind: 'mcp-form'; form: McpFormInput }
+
+/** The "add an MCP server" form. */
+export interface McpFormInput {
+  name: string
+  transport: 'stdio' | 'http'
+  command?: string
+  /** One argument per line. */
+  args?: string
+  /** KEY=value per line. */
+  env?: string
+  url?: string
+  /** "Header: value" per line. */
+  headers?: string
+}
 
 /** A plugin read into a staging area, shown for review before it's installed. */
 export interface PluginPreview {
@@ -298,6 +315,8 @@ export interface PluginPreview {
   plugin: PluginView
   /** Set when a plugin with the same id exists and installing would replace it. */
   replaces?: string
+  /** Credentials found in a pasted MCP config, moved to the keychain on install. */
+  movedSecrets?: string[]
 }
 
 export interface HitRect {
