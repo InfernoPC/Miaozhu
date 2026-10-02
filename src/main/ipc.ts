@@ -1,4 +1,5 @@
 import { BrowserWindow, Menu, app, clipboard, dialog, ipcMain, nativeImage, shell } from 'electron'
+import { relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import {
@@ -28,6 +29,8 @@ import { defaultScreenshotFolder, saveClipboardImage, takeScreenshot } from './c
 import { realPath } from './tools/paths'
 import type { GalleryService } from './gallery'
 import { copyImage } from './gallery/copy'
+import { folderNameFor } from './gallery/library'
+import { downloadLineStickers } from './gallery/line'
 import { launchInstaller, type UpdateChecker } from './updates/updater'
 import { searchWeb } from './tools/web'
 import type { WindowManager } from './windows'
@@ -471,6 +474,14 @@ function registerGalleryIpc(gallery: GalleryService, settings: SettingsStore, ag
   ipcMain.handle('gallery:reveal', (_e, rel: string) => shell.showItemInFolder(library.resolve(rel)))
   ipcMain.handle('gallery:open', async (_e, rel: string) => {
     await shell.openPath(library.resolve(rel))
+  })
+  ipcMain.handle('gallery:lineDownload', async (e, url: string, to: string) => {
+    const r = await downloadLineStickers(url, library.resolve(to), folderNameFor, (done, total, title) => {
+      if (!e.sender.isDestroyed()) e.sender.send('gallery:line-progress', { done, total, title })
+    })
+    gallery.changed()
+    const rel = relative(library.root(), r.folder).split(sep).join('/')
+    return { rel, title: r.title, saved: r.saved, skipped: r.skipped, failed: r.failed }
   })
   ipcMain.handle('gallery:tagStatus', () => tags.status())
   ipcMain.handle('gallery:tag', (_e, rels?: string[]) => void tags.run(rels))

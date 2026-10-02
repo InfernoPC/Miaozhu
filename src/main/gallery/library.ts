@@ -40,6 +40,11 @@ function cleanName(name: string): string {
   return n.slice(0, 200)
 }
 
+/** A folder name from outside text (e.g. a sticker set's title). */
+export function folderNameFor(title: string): string {
+  return cleanName(title.replace(/^\.+/, '').trim() || '貼圖')
+}
+
 /** "name.png" → "name (2).png" until it's free. */
 function freePath(dir: string, name: string): string {
   const ext = extname(name)

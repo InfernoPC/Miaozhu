@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { GalleryFolderView, GalleryImageView, GalleryListing, GalleryTagStatus } from '@shared/types'
 import { droppedPaths } from '../common/AttachmentChips'
 import { Icon } from '../common/Icon'
+import { LineDialog } from './LineDialog'
 import './gallery.css'
 
 const stripIpc = (e: unknown) => (e as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
@@ -66,6 +67,7 @@ export function Gallery() {
   const [tagStatus, setTagStatus] = useState<GalleryTagStatus | null>(null)
   const [naming, setNaming] = useState<{ title: string; initial: string; done: (name: string) => Promise<unknown> } | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
+  const [lineOpen, setLineOpen] = useState(false)
   const toastTimer = useRef<number | undefined>(undefined)
 
   const say = (text: string, error = false) => {
@@ -282,6 +284,9 @@ export function Gallery() {
           >
             <Icon name="plus" size={16} /> 資料夾
           </button>
+          <button className="quiet" title="貼上 LINE 貼圖網址，整組下載" onClick={() => setLineOpen(true)}>
+            <Icon name="paw" size={16} /> LINE 貼圖
+          </button>
           <button className="quiet" title="把剪貼簿的圖貼到這裡（⌘V / Ctrl+V）" onClick={() => void paste()}>
             <Icon name="clipboard" size={16} /> 貼上
           </button>
@@ -324,6 +329,17 @@ export function Gallery() {
       </main>
 
       {toast && <div className={`toast ${toast.error ? 'error' : ''}`}>{toast.text}</div>}
+      {lineOpen && (
+        <LineDialog
+          folder={rel}
+          onClose={() => setLineOpen(false)}
+          onDone={(target) => {
+            setLineOpen(false)
+            setQuery('')
+            void load(target)
+          }}
+        />
+      )}
       {naming && (
         <NameDialog
           title={naming.title}

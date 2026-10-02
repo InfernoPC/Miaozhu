@@ -92,3 +92,10 @@
 .name-dialog h3 { margin: 0 0 10px; font: 400 17px/1.3 var(--font-voice); }
 .name-dialog input { width: 100%; }
 .name-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.line-dialog { width: min(460px, calc(100vw - 48px)); }
+.line-dialog .hint { margin: 8px 0 0; font-size: 12.5px; color: var(--graphite); }
+.line-progress { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12.5px; }
+.line-progress span:first-child { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.line-progress progress { flex: 0 0 120px; accent-color: var(--pawpad); }
+.line-dialog .status { margin: 10px 0 0; }
+.disclaimer { margin: 10px 0 0; font-size: 11.5px; color: var(--graphite); }

@@ -529,6 +529,9 @@ export interface DesktopApi {
     openFolder(rel: string): Promise<void>
     open(rel: string): Promise<void>
     reveal(rel: string): Promise<void>
+    /** Downloads a LINE sticker set into a new folder under `toFolder`. */
+    lineDownload(url: string, toFolder: string): Promise<{ rel: string; title: string; saved: number; skipped: number; failed: number }>
+    onLineProgress(cb: (p: { done: number; total: number; title: string }) => void): () => void
     tagStatus(): Promise<GalleryTagStatus>
     tag(rels?: string[]): Promise<void>
     stopTagging(): Promise<void>

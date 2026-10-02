@@ -139,6 +139,12 @@ const api: DesktopApi = {
     openFolder: (rel) => ipcRenderer.invoke('gallery:openFolder', rel),
     open: (rel) => ipcRenderer.invoke('gallery:open', rel),
     reveal: (rel) => ipcRenderer.invoke('gallery:reveal', rel),
+    lineDownload: (url, to) => ipcRenderer.invoke('gallery:lineDownload', url, to),
+    onLineProgress: (cb) => {
+      const listener = (_e: Electron.IpcRendererEvent, p: { done: number; total: number; title: string }) => cb(p)
+      ipcRenderer.on('gallery:line-progress', listener)
+      return () => ipcRenderer.removeListener('gallery:line-progress', listener)
+    },
     tagStatus: () => ipcRenderer.invoke('gallery:tagStatus'),
     tag: (rels) => ipcRenderer.invoke('gallery:tag', rels),
     stopTagging: () => ipcRenderer.invoke('gallery:stopTagging'),
