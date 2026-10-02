@@ -4,7 +4,8 @@ import type { HitRect } from '@shared/types'
 
 type Route = 'pet' | 'chat' | 'settings'
 
-const PET_SIZE = { width: 340, height: 420 }
+// Tall enough for a reply balloon plus the input box above the cat; the empty part is transparent and click-through.
+const PET_SIZE = { width: 340, height: 520 }
 const HIT_TEST_INTERVAL_MS = 50
 
 function load(win: BrowserWindow, route: Route): void {

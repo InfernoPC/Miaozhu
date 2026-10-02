@@ -278,12 +278,14 @@ export function Pet() {
           </div>
         ) : reminder ? (
           <div className="bubble hit bubble-reminder" role="alert">
-            <p className="reminder-kicker">{reminder.late ? '錯過的提醒' : '提醒'}</p>
-            <p className="reminder-text">{reminder.text}</p>
-            <p className="reminder-when">
-              {new Date(reminder.at).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}
-              {due.length > 1 ? `，還有 ${due.length - 1} 個` : ''}
-            </p>
+            <div className="bubble-scroll">
+              <p className="reminder-kicker">{reminder.late ? '錯過的提醒' : '提醒'}</p>
+              <p className="reminder-text">{reminder.text}</p>
+              <p className="reminder-when">
+                {new Date(reminder.at).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}
+                {due.length > 1 ? `，還有 ${due.length - 1} 個` : ''}
+              </p>
+            </div>
             <div className="bubble-actions">
               <button className="primary" autoFocus onClick={() => answerReminder(reminder, 'dismiss')}>
                 好
@@ -296,9 +298,11 @@ export function Pet() {
           </div>
         ) : update && !bubble && !toolStatus ? (
           <div className="bubble hit bubble-reminder">
-            <p className="reminder-kicker">有新版本</p>
-            <p className="reminder-text">喵助 {update.latest} 出來了</p>
-            <p className="reminder-when">{updating ? '更新中，等一下會自動重新開啟…' : `目前是 ${update.current}`}</p>
+            <div className="bubble-scroll">
+              <p className="reminder-kicker">有新版本</p>
+              <p className="reminder-text">喵助 {update.latest} 出來了</p>
+              <p className="reminder-when">{updating ? '更新中，等一下會自動重新開啟…' : `目前是 ${update.current}`}</p>
+            </div>
             <div className="bubble-actions">
               <button className="primary" disabled={updating} onClick={installUpdate}>
                 更新

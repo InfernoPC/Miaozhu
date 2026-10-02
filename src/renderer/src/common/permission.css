@@ -1,4 +1,6 @@
-.perm { display: flex; flex-direction: column; gap: 7px; user-select: text; }
+.perm { display: flex; flex-direction: column; gap: 7px; user-select: text; min-height: 0; }
+.perm-body { display: flex; flex-direction: column; gap: 7px; min-height: 0; overflow-y: auto; }
+.perm-actions { flex-shrink: 0; }
 .perm-ask { margin: 0; font-family: var(--font-voice); font-size: 16px; line-height: 1.4; }
 .perm-what { display: flex; align-items: flex-start; gap: 7px; font-weight: 600; word-break: break-all; }
 .perm-what .icon { margin-top: 3px; }

@@ -18,13 +18,16 @@ export function PermissionPrompt({ request, compact }: { request: PermissionRequ
   const { ask, icon } = RISK[request.risk]
   return (
     <div className={`perm ${risky ? 'perm-risky' : ''} ${compact ? 'perm-compact' : ''}`} role="alertdialog" aria-label={ask}>
-      <p className="perm-ask">{ask}</p>
-      <div className="perm-what">
-        <Icon name={icon} size={15} />
-        <span>{request.title}</span>
+      {/* Scrolls on its own when space is short, so the buttons below stay visible. */}
+      <div className="perm-body">
+        <p className="perm-ask">{ask}</p>
+        <div className="perm-what">
+          <Icon name={icon} size={15} />
+          <span>{request.title}</span>
+        </div>
+        {request.reason && <p className="perm-reason">{request.reason}</p>}
+        {request.detail && request.detail !== request.title && <pre className="perm-detail">{request.detail}</pre>}
       </div>
-      {request.reason && <p className="perm-reason">{request.reason}</p>}
-      {request.detail && request.detail !== request.title && <pre className="perm-detail">{request.detail}</pre>}
       <div className="perm-actions">
         <button className="primary" onClick={() => respond('once')} autoFocus>
           允許
