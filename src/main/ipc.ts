@@ -19,6 +19,7 @@ import type { ReminderService } from './reminders/service'
 import type { ConversationStore } from './agent/conversation-store'
 import type { SkinPackManager } from './skins/skin-packs'
 import type { SettingsStore } from './settings/store'
+import { launchInstaller, type UpdateChecker } from './updates/updater'
 import { searchWeb } from './tools/web'
 import type { WindowManager } from './windows'
 
@@ -79,8 +80,15 @@ export function registerIpc(
   marketplaces: MarketplaceManager,
   reminders: ReminderService,
   conversations: ConversationStore,
-  skins: SkinPackManager
+  skins: SkinPackManager,
+  updates: UpdateChecker
 ): void {
+  const installUpdate = () => {
+    if (!app.isPackaged) throw new Error('開發版不能自動更新，請用 git pull')
+    launchInstaller(process.platform, app.getPath('exe'))
+    // Give the child a moment to detach before this process goes away.
+    setTimeout(() => app.quit(), 500)
+  }
   const selectSkin = (id: string) => {
     settings.setPetSkin(id)
     windows.pet?.webContents.send('pet:skin', id)
@@ -264,11 +272,20 @@ export function registerIpc(
       },
       dndMenu(reminders),
       { label: '新對話', click: () => agent.newConversation() },
+      ...(updates.get().available ? [{ label: `更新到 ${updates.get().latest}…`, click: () => installUpdate() }] : []),
       { type: 'separator' },
       { label: '設定…', click: () => windows.openSettings() },
       { type: 'separator' },
       { label: '結束', click: () => app.quit() }
     ]).popup({ window: BrowserWindow.fromWebContents(e.sender) ?? undefined })
+  })
+
+  ipcMain.handle('updates:status', () => updates.get())
+  ipcMain.handle('updates:check', () => updates.check())
+  ipcMain.handle('updates:install', () => installUpdate())
+  ipcMain.on('updates:openReleasePage', () => {
+    const url = updates.get().url ?? 'https://github.com/InfernoPC/Miaozhu/releases/latest'
+    void shell.openExternal(url)
   })
 
   ipcMain.on('windows:openChat', () => windows.openChat())

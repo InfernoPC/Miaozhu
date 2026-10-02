@@ -308,6 +308,18 @@ export interface HitRect {
 }
 
 /** The API exposed on window.api by the preload script. */
+/** Result of checking GitHub Releases for a newer build. */
+export interface UpdateStatus {
+  current: string
+  latest?: string
+  available: boolean
+  notes?: string
+  /** Release page, for "what's new". */
+  url?: string
+  checkedAt?: string
+  error?: string
+}
+
 export interface DesktopApi {
   agent: {
     send(text: string, attachments?: string[]): Promise<void>
@@ -402,6 +414,14 @@ export interface DesktopApi {
     dragEnd(): void
     showMenu(): void
     onSkinChange(cb: (skin: PetSkinId) => void): () => void
+  }
+  updates: {
+    status(): Promise<UpdateStatus>
+    check(): Promise<UpdateStatus>
+    /** Runs the install script in the background and quits; it reopens the new version. */
+    install(): Promise<void>
+    openReleasePage(): void
+    onAvailable(cb: (status: UpdateStatus) => void): () => void
   }
   windows: {
     openChat(): void

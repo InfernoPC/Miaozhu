@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { AttachmentView, DueReminder, LoadedSkin, PermissionRequest, PetSkinId, PetState } from '@shared/types'
+import type { AttachmentView, DueReminder, LoadedSkin, PermissionRequest, PetSkinId, PetState, UpdateStatus } from '@shared/types'
 import { AttachmentChips, droppedPaths } from '../common/AttachmentChips'
 import { Icon } from '../common/Icon'
 import { Markdown } from '../common/Markdown'
@@ -35,6 +35,8 @@ export function Pet() {
   const [toolStatus, setToolStatus] = useState<string | null>(null)
   const [permissions, setPermissions] = useState<PermissionRequest[]>([])
   const [due, setDue] = useState<DueReminder[]>([])
+  const [update, setUpdate] = useState<UpdateStatus | null>(null)
+  const [updating, setUpdating] = useState(false)
   const [inputOpen, setInputOpen] = useState(false)
   const [draft, setDraft] = useState('')
   const [attachments, setAttachments] = useState<AttachmentView[]>([])
@@ -79,6 +81,18 @@ export function Pet() {
       }),
     []
   )
+  useEffect(() => window.api.updates.onAvailable(setUpdate), [])
+  const installUpdate = async () => {
+    setUpdating(true)
+    try {
+      await window.api.updates.install()
+    } catch {
+      setUpdating(false)
+      setUpdate(null)
+      window.api.windows.openSettings()
+    }
+  }
+
   const answerReminder = (r: DueReminder, action: 'dismiss' | 'snooze') => {
     void (action === 'dismiss' ? window.api.reminders.dismiss(r.id) : window.api.reminders.snooze(r.id, 10))
     setDue((list) => {
@@ -277,6 +291,20 @@ export function Pet() {
               <button onClick={() => answerReminder(reminder, 'snooze')}>10 分鐘後</button>
               <button className="quiet" onClick={() => window.api.windows.openChat()}>
                 打開對話
+              </button>
+            </div>
+          </div>
+        ) : update && !bubble && !toolStatus ? (
+          <div className="bubble hit bubble-reminder">
+            <p className="reminder-kicker">有新版本</p>
+            <p className="reminder-text">喵助 {update.latest} 出來了</p>
+            <p className="reminder-when">{updating ? '更新中，等一下會自動重新開啟…' : `目前是 ${update.current}`}</p>
+            <div className="bubble-actions">
+              <button className="primary" disabled={updating} onClick={installUpdate}>
+                更新
+              </button>
+              <button disabled={updating} onClick={() => setUpdate(null)}>
+                稍後
               </button>
             </div>
           </div>

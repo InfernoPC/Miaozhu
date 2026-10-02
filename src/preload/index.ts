@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { AgentEvent, DesktopApi, DueReminder, PetSkinId } from '@shared/types'
+import type { AgentEvent, DesktopApi, DueReminder, PetSkinId, UpdateStatus } from '@shared/types'
 
 const api: DesktopApi = {
   agent: {
@@ -98,6 +98,17 @@ const api: DesktopApi = {
       const listener = (_e: Electron.IpcRendererEvent, skin: PetSkinId) => cb(skin)
       ipcRenderer.on('pet:skin', listener)
       return () => ipcRenderer.removeListener('pet:skin', listener)
+    }
+  },
+  updates: {
+    status: () => ipcRenderer.invoke('updates:status'),
+    check: () => ipcRenderer.invoke('updates:check'),
+    install: () => ipcRenderer.invoke('updates:install'),
+    openReleasePage: () => ipcRenderer.send('updates:openReleasePage'),
+    onAvailable: (cb) => {
+      const listener = (_e: Electron.IpcRendererEvent, s: UpdateStatus) => cb(s)
+      ipcRenderer.on('update:available', listener)
+      return () => ipcRenderer.removeListener('update:available', listener)
     }
   },
   windows: {

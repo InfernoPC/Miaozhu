@@ -10,6 +10,7 @@ import { SkinPackManager } from './skins/skin-packs'
 import { reminderTools } from './tools/reminders'
 import { adoptLoginShellPath } from './util/shell-path'
 import { SettingsStore } from './settings/store'
+import { UpdateChecker } from './updates/updater'
 import { WindowManager } from './windows'
 
 // Only one pet on the desktop: a second launch focuses the first instance instead.
@@ -48,11 +49,20 @@ app.whenReady().then(async () => {
     plugins,
     extraTools: reminderTools(reminders)
   })
-  registerIpc(agent, settings, windows, plugins, marketplaces, reminders, conversations, new SkinPackManager())
+  const updates = new UpdateChecker({
+    currentVersion: app.getVersion(),
+    enabled: app.isPackaged,
+    onAvailable: (s) => {
+      for (const win of windows.all()) if (!win.isDestroyed()) win.webContents.send('update:available', s)
+    }
+  })
+  registerIpc(agent, settings, windows, plugins, marketplaces, reminders, conversations, new SkinPackManager(), updates)
   reminders.start()
+  updates.start()
   void plugins.start()
   app.on('before-quit', () => {
     reminders.stop()
+    updates.stop()
     void plugins.stopAll()
   })
 
