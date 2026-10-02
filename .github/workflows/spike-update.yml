@@ -1,0 +1,31 @@
+name: Spike - Windows update
+
+on:
+  push:
+    branches: ['fix/windows-update']
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [current, hidden-window, cmd-start]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Spawn and quit
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: npx electron spike/update-spawn-spike.cjs
+      - name: Did the child finish after the parent quit?
+        shell: pwsh
+        run: |
+          $m = Join-Path $env:TEMP "marker-${{ matrix.variant }}.txt"
+          for ($i = 0; $i -lt 30 -and -not (Test-Path $m); $i++) { Start-Sleep 2 }
+          if (Test-Path $m) { "RESULT ${{ matrix.variant }}: finished" } else { "RESULT ${{ matrix.variant }}: never finished"; Get-Process powershell -ErrorAction SilentlyContinue | Format-Table Id, StartTime }
